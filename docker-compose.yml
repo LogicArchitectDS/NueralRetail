@@ -1,0 +1,99 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.0-python3.12
+  environment:
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    - "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow"
+    - "AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow"
+    - "AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY:-FB1pUv_H13C-C0E-v2F3H-f_4V4L8mG8L8L8L8L8L8L=}"
+    - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    - AIRFLOW__OPENLINEAGE__NAMESPACE=neuralretail
+    - "AIRFLOW__OPENLINEAGE__URL=http://marquez:5000"
+    - "AIRFLOW__OPENLINEAGE__TRANSPORT={\"type\": \"http\", \"url\": \"http://marquez:5000/api/v1/lineage\"}"
+  volumes:
+    - ./src/pipelines/dags:/opt/airflow/dags
+    - ./src:/opt/airflow/dags/src
+    - ./data:/opt/airflow/data
+    - ./config:/opt/airflow/config
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    environment:
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      - _AIRFLOW_WWW_USER_PASSWORD=${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+
+  marquez:
+    image: marquezproject/marquez:latest
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - MARQUEZ_CONFIG=/marquez/config.yaml
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          memory: 1G

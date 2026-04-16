@@ -1,0 +1,3 @@
+transaction_id,customer_id,product_id,amount,email
+T1001,C500,P001,150.50,alice@example.com
+T1002,C501,P002,20.00,bob@example.com

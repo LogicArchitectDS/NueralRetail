@@ -30,10 +30,14 @@ with DAG(
         application=SPARK_SCRIPT_PATH,
         name='neuralretail_ingest_job',
         conn_id='spark_default',
-        packages='io.delta:delta-spark_2.12:3.0.0',
+        packages='io.delta:delta-spark_2.12:3.0.0,io.openlineage:openlineage-spark_2.12:1.11.3',
         conf={
-            'spark.sql.extensions': 'io.delta.sql.DeltaSparkSessionExtension',
+            'spark.sql.extensions': 'io.delta.sql.DeltaSparkSessionExtension,openlineage.spark.SparkOpenLineageExtension',
             'spark.sql.catalog.spark_catalog': 'org.apache.spark.sql.delta.catalog.DeltaCatalog',
+            # --- MOVED FROM PYTHON TO AIRFLOW ---
+            'spark.openlineage.transport.type': 'http',
+            'spark.openlineage.transport.url': 'http://marquez:5000', 
+            'spark.openlineage.namespace': 'neuralretail'
         },
         verbose=True
     )

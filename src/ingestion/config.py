@@ -4,6 +4,7 @@ from typing import List, Dict
 class IngestionSettings(BaseSettings):
     LANDING_ZONE: str = "data/landing"
     BRONZE_ZONE: str = "data/bronze"
+    PII_SALT: str
     
     # Define PII columns per source
     PII_COLUMNS: Dict[str, List[str]] = {

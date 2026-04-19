@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     redis_password: str
 
     # MLflow
-    mlflow_tracking_uri: str = "http://localhost:5000"
+    mlflow_tracking_uri: str = "http://localhost:5002"
     mlflow_s3_endpoint_url: str = "http://localhost:9000"
     aws_access_key_id: str
     aws_secret_access_key: str

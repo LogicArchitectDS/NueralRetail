@@ -1,36 +1,42 @@
-import sys
+import logging
 import os
 from datetime import datetime
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from openlineage.spark import SparkOpenLineageExtension
+from src.ingestion.config import settings
+from src.quality.pos_expectations import validate_pos_data
 
-try:
-    from src.ingestion.config import settings
-    from src.quality.pos_expectations import validate_pos_data
-except ImportError:
-    sys.path.append(os.getcwd())
-    from src.ingestion.config import settings
-    from src.quality.pos_expectations import validate_pos_data
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def create_spark_session():
-    """Create Spark session with OpenLineage and Delta extensions."""
+    """Create Spark session with Delta extensions."""
     return (SparkSession.builder
             .appName("NeuralRetail-Ingestion")
-            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension,openlineage.spark.SparkOpenLineageExtension")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
             .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
-            .config("spark.openlineage.transport.type", "http")
-            .config("spark.openlineage.transport.url", os.getenv("OPENLINEAGE_URL", "http://marquez:5000"))
-            .config("spark.openlineage.namespace", "neuralretail")
             .getOrCreate())
 
 def hash_pii_columns(df, columns):
-    """Applies SHA-256 hashing to PII columns."""
+    """Applies SHA-256 hashing to PII columns using the configured salt."""
     for col in columns:
         if col in df.columns:
-            salt = os.getenv("PII_SALT", "SIMULATED_SALT_2026") 
-            df = df.withColumn(col, F.sha2(F.concat(F.col(col), F.lit(salt)), 256))
+            df = df.withColumn(col, F.sha2(F.concat(F.col(col), F.lit(settings.PII_SALT)), 256))
+        else:
+            logger.warning(f"PII column '{col}' not found in source schema.")
     return df
+
+def get_dir_size(path):
+    """Calculates total size of a directory or file in bytes."""
+    if os.path.isfile(path):
+        return os.path.getsize(path)
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
 
 def ingest_source(spark, source_name):
     """Ingests a single source from landing to bronze with DQ and Lineage."""
@@ -39,19 +45,26 @@ def ingest_source(spark, source_name):
     pii_cols = settings.PII_COLUMNS.get(source_name, [])
 
     if not os.path.exists(source_path):
+        raise FileNotFoundError(f"Source path {source_path} does not exist for source {source_name}")
+    
+    # Check for empty files or directories
+    if get_dir_size(source_path) == 0:
+        logger.warning(f"Skipping {source_name}: Source is empty (0 bytes).")
         return
 
-    # 1. Read (OpenLineage will track this input)
+    logger.info(f"Reading source {source_name} from {source_path}")
     df = spark.read.format("csv").option("header", "true").option("inferSchema", "true").load(source_path)
 
     # 2. Data Quality Gate (Great Expectations)
     if source_name == "pos":
-        # Convert a sample to pandas for GE validation (standard GE-Spark integration is more complex)
+        # Convert a sample to pandas for GE validation
+        # Note: For production, consider Spark-native GE validation or Pandera
         pdf_sample = df.limit(1000).toPandas() 
         is_valid = validate_pos_data(pdf_sample)
         if not is_valid:
-            print(f"DQ FAILURE: {source_name} failed Great Expectations validation. Aborting.")
-            return
+            error_msg = f"DQ FAILURE: {source_name} failed Great Expectations validation. Aborting."
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
     # 3. Transformations (PII Hashing)
     df = hash_pii_columns(df, pii_cols)
@@ -59,19 +72,22 @@ def ingest_source(spark, source_name):
     # 4. Metadata
     df = df.withColumn("_ingestion_timestamp", F.current_timestamp()) \
            .withColumn("_source_file", F.input_file_name()) \
-           .withColumn("_ingestion_date", F.lit(datetime.now().strftime("%Y-%m-%d")))
+           .withColumn("_ingestion_date", F.to_date(F.col("_ingestion_timestamp")))
 
-    # 5. Write (OpenLineage will track this output)
+    # 5. Write
     target_path = os.path.join(settings.BRONZE_ZONE, target_table)
+    logger.info(f"Writing {source_name} to {target_path}")
     (df.write.format("delta")
      .mode("append")
      .partitionBy("_ingestion_date")
      .save(target_path))
     
-    print(f"Successfully ingested {source_name} to {target_table}")
+    logger.info(f"Successfully ingested {source_name} to {target_table}")
 
 if __name__ == "__main__":
     spark_session = create_spark_session()
-    for source in settings.TABLES.keys():
-        ingest_source(spark_session, source)
-    spark_session.stop()
+    try:
+        for source in settings.TABLES.keys():
+            ingest_source(spark_session, source)
+    finally:
+        spark_session.stop()

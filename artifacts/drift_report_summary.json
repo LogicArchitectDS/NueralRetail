@@ -1,0 +1,11 @@
+{
+  "drift_status": "STABLE",
+  "overall_psi": 0.0006,
+  "feature_psi": {
+    "frequency": 0.0006,
+    "monetary": 0.0006,
+    "recency": 0.0005
+  },
+  "retrain_recommended": false,
+  "checked_at": "2026-04-29 15:30:53.303905"
+}

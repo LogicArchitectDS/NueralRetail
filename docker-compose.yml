@@ -1,143 +1,16 @@
-x-airflow-common: &airflow-common
-  build:
-    context: .
-    dockerfile: docker/airflow/Dockerfile
-  environment:
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres/airflow"
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres/airflow"
-    AIRFLOW__CORE__FERNET_KEY: ${FERNET_KEY:-FB1pUv_H13C-C0E-v2F3H-f_4V4L8mG8L8L8L8L8L8L=}
-    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-    AIRFLOW__DATABASE__LOAD_DEFAULT_CONNECTIONS: "False"
-    AIRFLOW__OPENLINEAGE__NAMESPACE: neuralretail
-    AIRFLOW__OPENLINEAGE__URL: http://marquez:5000
-    AIRFLOW__OPENLINEAGE__TRANSPORT: '{"type": "http", "url": "http://marquez:5000"}'
-    INGEST_PII_SALT: ${INGEST_PII_SALT}
-  volumes:
-    - ./src/pipelines/dags:/opt/airflow/dags
-    - ./src:/opt/airflow/dags/src
-    - ./data:/opt/airflow/data
-    - ./config:/opt/airflow/config
-  user: "${AIRFLOW_UID:-50000}:0"
-  depends_on:
-    postgres:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
-
+version: "3.9"
 services:
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow
-    volumes:
-      - ./docker/postgres/create-marquez-db.sql:/docker-entrypoint-initdb.d/create-marquez-db.sql
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U airflow" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-
-  airflow-webserver:
-    <<: *airflow-common
-    command: webserver
+  api:
+    build: .
     ports:
-      - "8080:8080"
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./models:/app/models
+    environment:
+      - PYTHONPATH=/app
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:8080/health" ]
-      interval: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
       timeout: 10s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-
-  airflow-scheduler:
-    <<: *airflow-common
-    command: scheduler
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-
-  airflow-init:
-    <<: *airflow-common
-    command: version
-    environment:
-      _AIRFLOW_DB_UPGRADE: "true"
-      _AIRFLOW_WWW_USER_CREATE: "true"
-      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
-      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres/airflow"
-      AIRFLOW__CORE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres/airflow"
-
-  marquez:
-    image: marquezproject/marquez:latest
-    ports:
-      - "5000:5000"
-      - "5001:5001"
-    volumes:
-      - ./docker/marquez/marquez.yaml:/marquez/marquez.yaml
-    environment:
-      - MARQUEZ_CONFIG=/marquez/marquez.yaml
-    depends_on:
-      postgres:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-
-  marquez-web:
-    image: marquezproject/marquez-web:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - MARQUEZ_HOST=marquez
-      - MARQUEZ_PORT=5000
-      - WEB_PORT=3000
-    depends_on:
-      - marquez
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.13.0
-    container_name: neuralretail-mlflow
-    ports:
-      - "5002:5000"
-    command: >
-      sh -c "pip install psycopg2-binary && mlflow server --host 0.0.0.0 --port 5000"
-    environment:
-      # Adjusted to match the new database credentials your CLI created
-      - MLFLOW_BACKEND_STORE_URI=postgresql://airflow:airflow@postgres:5432/mlflow
-      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./data/mlflow_artifacts:/mlflow/artifacts
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+      retries: 3

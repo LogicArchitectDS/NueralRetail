@@ -1,3 +1,5 @@
 transaction_id,customer_id,product_id,amount,email
-T1001,C500,P001,150.50,alice@example.com
-T1002,C501,P002,20.00,bob@example.com
+TX001,C001,P101,100.00,user_A@[EMAIL_ADDRESS]
+TX002,C002,P102,200.00,user_B@[EMAIL_ADDRESS]
+TX003,C003,P103,300.00,user_C@[EMAIL_ADDRESS]
+TX004,C001,P101,150.00,user_A@[EMAIL_ADDRESS]

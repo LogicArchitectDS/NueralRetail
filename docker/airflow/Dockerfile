@@ -27,7 +27,7 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 RUN pip install --no-cache-dir --default-timeout=1000 \
     "apache-airflow==2.9.0" \
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.0/constraints-3.12.txt" \
-    pyspark==3.5.0 \
+    pyspark \
     apache-airflow-providers-apache-spark \
     delta-spark \
     pydantic-settings \

@@ -10,11 +10,17 @@
     - Target: Delta Lake (Bronze Layer)
 
 ## Phase 2: Feature Engineering & MLOps
-- **Status:** PLANNED 📅
-- **Goal:** RFM/Lag features, Feast Store, MLflow tracking
+- **Status:** COMPLETED ✅
+- **Deliverables:**
+    - Silver Layer (`data/silver/transactions`) via `src/features/transformation.py`
+    - RFM & Lag Features (`data/features/`) via `src/features/definitions.py`
+    - Feast Repository (`src/features/feature_repo`) with Local/Redis support
+    - MLflow Tracking integration (Port 5002)
+    - Feature Pipeline DAG (`src/pipelines/dags/silver_feature_dag.py`)
 
 ## Phase 3: Predictive Modeling
 - **Status:** PLANNED 📅
+- **Goal:** Demand Forecasting (Prophet/LSTM), Churn Prediction (XGBoost)
 
 ## Phase 4: Serving & Dashboard
 - **Status:** PLANNED 📅

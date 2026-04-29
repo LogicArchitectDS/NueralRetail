@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.eggs/
+*.egg-info/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Build artifacts
+*.log
+*.tmp
+*.temp
+build/
+dist/
+*.tar.gz
+
+# Data (too large for container)
+# data/
+!data/.gitkeep
+
+# Models (will be mounted or downloaded)
+# models/
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Config
+*.local.json
+settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db

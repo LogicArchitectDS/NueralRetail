@@ -1,5 +1,8 @@
+# NeuralRetail .gitignore
+
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -22,17 +25,6 @@ build/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-
-# Data & Spark
-data/
-!data/.gitkeep
-!data/landing/pos/sample_pos.csv
-spark-warehouse/
-metastore_db/
-derby.log
-*.crc
-*.parquet
-*.snappy.parquet
 
 # MLOps & Feast
 mlruns/
@@ -57,5 +49,20 @@ terraform.rc
 logs/
 *.log
 
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large data files — excluded from git
+artifacts/*.csv
+artifacts/*.parquet
+data/
+models/
+spark-warehouse/
+metastore_db/
+derby.log/
+*.crc
+*.snappy.parquet
 *.tar.gz
 *.tgz

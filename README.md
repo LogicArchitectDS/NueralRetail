@@ -1,106 +1,307 @@
-# NeuralRetail Enterprise Platform
+# NeuralRetail Enterprise Intelligence Platform
 
-Welcome to the **NeuralRetail** project! This repository contains the source code for our next-generation Enterprise Sales Intelligence and MLOps platform.
-
-## 🚀 Current Project Status
-
-**Status:** Infrastructure Initialized. Entering Data Engineering Phase.
-
-We have successfully completed the foundation and local infrastructure phases. The project is currently configured as a monorepo with strict dependency management and a fully containerized local development sandbox.
-
-### Completed Phases
-- **Phase 0: Repository Foundation** - Monorepo setup, Poetry dependency locking, Ruff/Black pre-commit hooks. *(Completed by Sesha Sai)*
-- **Phase 1: Local Infrastructure** - Profile-driven Docker architecture (Airflow, Marquez, Postgres, Redis, isolated MLflow on port 5002) operating under a strict 6GB WSL constraint. *(Completed by Sesha Sai)*
+> **A next-generation retail analytics platform combining MLOps best practices with production-grade machine learning models for customer segmentation, demand forecasting, churn prediction, price elasticity, and inventory optimization.**
 
 ---
 
-## 💻 Developer Setup & Installation
+## Table of Contents
 
-To run the current sandbox on your local machine, please follow these instructions carefully.
+- [Architecture Overview](#architecture-overview)
+- [Tech Stack](#tech-stack)
+- [Model Performance Metrics](#model-performance-metrics)
+- [Quick Start](#quick-start)
+- [API Endpoints](#api-endpoints)
+- [Dashboard Pages](#dashboard-pages)
+- [Project Structure](#project-structure)
+- [Deployment](#deployment)
+- [Team](#team)
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           NEURALRETAIL ARCHITECTURE                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┐         ┌──────────────────┐                         │
+│  │   Streamlit UI   │────────▶│   FastAPI Gateway│                         │
+│  │   (Port 8501)    │         │   (Port 8000)    │                         │
+│  │                  │         │                  │                         │
+│  │  • Segmentation  │         │  /predict/churn  │                         │
+│  │  • Churn SHAP    │         │  /predict/segment│                         │
+│  │  • EOQ Calculator│         │  /inventory/...  │                         │
+│  │  • Price Sim     │         │  /price/simulate │                         │
+│  └──────────────────┘         └─────────┬────────┘                         │
+│                                          │                                  │
+│                                          ▼                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        ML MODEL LAYER                                │   │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌───────────────┐  │   │
+│  │  │   K-Means   │ │  XGBoost    │ │  LSTM +     │ │  Log-Log OLS  │  │   │
+│  │  │  (F-02)     │ │  (F-04)     │ │  Prophet    │ │  (F-05)       │  │   │
+│  │  │  Silhouette │ │  AUC-ROC    │ │  MAPE       │ │  R² = 0.996   │  │   │
+│  │  │  = 0.609    │ │  = 0.5893   │ │  = 113%     │ │               │  │   │
+│  │  └─────────────┘ └─────────────┘ └─────────────┘ └───────────────┘  │   │
+│  │  ┌───────────────────────────────────────────────────────────────┐  │   │
+│  │  │           Inventory Optimization Engine (F-06)                │  │   │
+│  │  │           EOQ │ Safety Stock │ Reorder Point                  │  │   │
+│  │  └───────────────────────────────────────────────────────────────┘  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        DATA LAYER                                    │   │
+│  │  Bronze (Raw) │ Silver (Features) │ Pickle Artifacts │ MLflow       │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Backend** | FastAPI + Uvicorn | High-performance REST API |
+| **Frontend** | Streamlit | Interactive multi-page dashboard |
+| **ML Models** | XGBoost, K-Means, LSTM, Prophet | Predictive analytics engines |
+| **Data Processing** | Polars, Pandas, PySpark | ETL and feature engineering |
+| **Deep Learning** | PyTorch, PyTorch Lightning | Neural network training |
+| **Experiment Tracking** | MLflow | Model registry and metrics logging |
+| **Containerization** | Docker Compose | Multi-stage builds, isolated services |
+| **Dependency Mgmt** | Poetry | Locked dependency resolution |
+
+---
+
+## Model Performance Metrics
+
+### Completed Analytical Engines (Amdox Requirements)
+
+| Feature ID | Engine | Model | Primary Metric | Status |
+|------------|--------|-------|----------------|--------|
+| **F-02** | Customer Segmentation | K-Means (k=10) | Silhouette Score = **0.609** | ✅ Production |
+| **F-03** | Demand Forecasting | LSTM + Prophet Ensemble | MAPE = **113%** | ⚠️ Champion/Challenger |
+| **F-04** | Churn Prediction | XGBoost + SMOTE | AUC-ROC = **0.5893** | ⚠️ Class Imbalance |
+| **F-05** | Price Intelligence | Log-Log OLS Regression | R² = **0.9963**, Elasticity = **-1.73** | ✅ Production |
+| **F-06** | Inventory Optimization | Deterministic OR Engine | EOQ, Safety Stock, ROP | ✅ Production |
+
+> **Note on F-03 (Forecasting):** The elevated MAPE is expected due to sparsity in the 100k-row Olist dataset. The architecture supports Champion/Challenger comparison—users can evaluate both LSTM and Prophet predictions independently.
+
+> **Note on F-04 (Churn):** Heavy class imbalance in the source data limits AUC-ROC. SMOTE oversampling and `scale_pos_weight` have been applied to improve recall on the minority class.
+
+---
+
+## Quick Start
 
 ### Prerequisites
-1. **Python 3.12+**: Required for our core ML and data engineering libraries.
-2. **Poetry**: We use Poetry for dependency management. (`pip install poetry`)
-3. **Docker Desktop**: Ensure you have Docker running. 
-   * **Crucial Note for Windows Users:** You must allocate a strict **6GB RAM limit** in your WSL2 `.wslconfig` file. The infrastructure has been specifically tuned for this constraint.
-
-### 1. Repository Setup
-
-Clone the repository and install the Python dependencies:
 
 ```bash
+# Python 3.12+ required
+python --version
+
+# Install Poetry for dependency management
+pip install poetry
+
+# Docker Desktop with WSL2 (Windows users: set 6GB RAM limit in .wslconfig)
+docker --version
+```
+
+### Installation
+
+```bash
+# 1. Clone the repository
 git clone <repository_url>
 cd NeuralRetail
 
-# Install dependencies using Poetry
+# 2. Install Python dependencies
 poetry install
-```
 
-### 2. Environment Configuration
-
-You need a `.env` file to securely store your local configuration.
-
-```bash
-# Copy the example environment file
+# 3. Copy environment configuration
 cp .env.example .env
-```
-*(Note: Do not commit your `.env` file!)*
-
-### 3. Launching the Local Sandbox
-
-We utilize a **Profile-Driven Docker Architecture** to stay within the 6GB memory constraint. **Do NOT run `docker compose up -d`.** Instead, use the provided `Makefile` to spin up only the environment you need for your phase.
-
-```bash
-# For Integration & MLOps (Boots Airflow, Marquez, Postgres, Redis)
-make up-ops
-
-# For Data Engineering (Boots Spark/Data Infrastructure)
-make up-data
-
-# For ML Engineering (Boots MLflow)
-make up-ml
+# Edit .env with your local credentials
 ```
 
-*To shut down your active sandbox and free up memory, run:*
+### Launch with Docker
+
 ```bash
-make down
+# Start both API and Streamlit services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Access the Dashboard
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Streamlit Dashboard** | http://localhost:8501 | Main UI |
+| **FastAPI Docs** | http://localhost:8000/docs | Swagger API explorer |
+| **Health Check** | http://localhost:8000/health | Service status |
+
+---
+
+## API Endpoints
+
+### Inference Endpoints
+
+| Method | Endpoint | Description | Request Schema |
+|--------|----------|-------------|----------------|
+| `GET` | `/health` | Service health check | - |
+| `POST` | `/predict/churn` | Churn prediction + SHAP values | `{Frequency, Monetary}` |
+| `POST` | `/predict/segment` | Customer segmentation | `{Frequency, Monetary}` |
+| `POST` | `/inventory/optimize` | EOQ, Safety Stock, ROP | `{annual_demand, order_cost, holding_cost, ...}` |
+| `POST` | `/price/simulate` | Elasticity + revenue projection | `{historical_prices, historical_demands, current_price, ...}` |
+
+### Example: Churn Prediction
+
+```bash
+curl -X POST http://localhost:8000/predict/churn \
+  -H "Content-Type: application/json" \
+  -d '{"Frequency": 10, "Monetary": 100.0}'
+```
+
+**Response:**
+```json
+{
+  "churn_prediction": 0,
+  "churn_probability": 0.23,
+  "shap_values": {
+    "Frequency": -0.15,
+    "Monetary": -0.08
+  }
+}
 ```
 
 ---
 
-## ✅ How to Verify the Setup (Phases 0 & 1)
+## Dashboard Pages
 
-Once you have completed the installation, verify that the initial phases are working perfectly:
+The Streamlit application features **5 distinct pages** accessible via the sidebar:
 
-### Verify Phase 0 (Code Quality & Dependencies)
-Run the following commands to ensure your local environment is correctly locked and formatted:
-- **Check Dependencies:** `poetry check` and `poetry env info`
-- **Check Linting:** `poetry run ruff check .`
-- **Check Formatting:** `poetry run black --check .`
-
-### Verify Phase 1 (Local Infrastructure)
-Run `docker compose ps` to verify container health. You should see `postgres`, `redis`, and `airflow-webserver` listed as `Up (healthy)`.
-
-Verify the UIs are accessible in your browser:
-- **Apache Airflow:** [http://localhost:8080](http://localhost:8080)
-- **MLflow Model Registry:** [http://localhost:5002](http://localhost:5002) *(Note: Port 5002 is intentional to avoid collisions)*
-- **Marquez (Data Lineage):** [http://localhost:3000](http://localhost:3000)
+1. **Executive Overview** — 4 KPI cards + 7-day revenue trend chart
+2. **Customer Intelligence Hub** — CHURN + SEGMENTATION analysis with SHAP waterfall charts
+3. **Inventory Health** — EOQ calculator with safety stock and reorder point outputs
+4. **Price Simulator** — Elasticity coefficient display + "What-If" revenue simulator
+5. **MLOps Monitor** — Model registry table with MLflow metrics
 
 ---
 
-## 🎯 Remaining Phases & Assignments
+## Project Structure
 
-The following phases outline the roadmap for the rest of the project. Please coordinate with your respective team members.
+```
+NeuralRetail/
+├── docker-compose.yml          # Multi-service orchestration
+├── Dockerfile.api              # API container (multi-stage)
+├── Dockerfile.app              # Streamlit container
+├── pyproject.toml              # Poetry dependency manifest
+├── .env                        # Environment variables (gitignored)
+├── .env.example                # Template for environment setup
+│
+├── src/
+│   ├── api/
+│   │   └── main.py             # FastAPI application
+│   ├── app/
+│   │   └── streamlit_app.py    # Streamlit dashboard
+│   ├── models/
+│   │   ├── train_xgboost.py    # Churn model trainer
+│   │   ├── train_kmeans.py     # Segmentation trainer
+│   │   ├── train_lstm.py       # Demand forecaster
+│   │   ├── train_shap.py       # SHAP explainer generator
+│   │   ├── inventory_engine.py # EOQ math engine
+│   │   └── price_engine.py     # Elasticity engine
+│   ├── features/
+│   │   ├── transformation.py   # Silver layer transforms
+│   │   └── definitions.py      # Feature calculations
+│   └── ingestion/
+│       └── ingest.py           # Bronze layer ingestion
+│
+├── data/
+│   ├── bronze/                 # Raw ingested data (Parquet)
+│   ├── silver/                 # Transformed features
+│   └── features/               # Model-ready datasets
+│
+└── models/                     # Trained model artifacts (.pkl, .pth)
+    ├── xgboost_churn.pkl
+    ├── kmeans_model.pkl
+    ├── kmeans_scaler.pkl
+    ├── lstm_scaler.pkl
+    └── shap_explainer.pkl
+```
 
-- **Phase 2 & 3: Data Ingestion & Feast Feature Store** - PySpark transformations, Great Expectations data quality gates, and centralized feature serving. 
-  - 👤 **Assignee:** Vaidehi
-- **Phase 4a: Demand Forecasting Modeling** - PyTorch/Prophet time-series intelligence engines. 
-  - 👤 **Assignee:** Karthikeyan
-- **Phase 4b: Classification & Churn Modeling** - XGBoost/LightGBM with SHAP segmentation. 
-  - 👤 **Assignee:** Ayush
-- **Phase 5: Serving Layer** - Secure FastAPI endpoints with Redis caching for low-latency inference. 
-  - 👤 **Assignee:** Pawan
-- **Phase 6: Intelligence Dashboard** - Streamlit interactive UI for business stakeholders. 
-  - 👤 **Assignee:** Nithish
-- **Phases 7-12: Production MLOps** - CI/CD pipelines, Kubernetes deployment, model drift monitoring, and automated retraining. 
-  - 👤 **Assignee:** Sesha Sai
+---
+
+## Deployment
+
+### Local Development
+
+```bash
+# Full stack with hot reload
+docker-compose up --build
+```
+
+### PaaS Deployment (Render / Railway)
+
+1. **Push to GitHub** — Ensure your repository is on GitHub
+2. **Connect to Render/Railway** — Link your repository
+3. **Set Environment Variables:**
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `API_URL` | Backend API endpoint | `https://your-api.onrender.com` |
+| `PYTHON_VERSION` | Python runtime | `3.12.0` |
+| `PIP_REQUIRE_VIRTUALENV` | Disable for PaaS | `false` |
+
+4. **Deploy Commands:**
+
+**Render:**
+```bash
+# Web Service: API
+pip install -r requirements.txt && uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+```
+
+**Railway:**
+```bash
+# Automatically detects pyproject.toml
+# Set PORT environment variable
+```
+
+### Environment Variable Migration
+
+All hardcoded `localhost` references have been replaced with environment variables:
+
+```python
+# Before
+API_URL = "http://127.0.0.1:8000"
+
+# After
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+```
+
+---
+
+## Team
+
+| Name | Role | Focus Area |
+|------|------|------------|
+| Sesha Sai | DevOps & MLOps | Infrastructure, CI/CD, Monitoring |
+| Vaidehi | Data Engineering | Feast Feature Store, PySpark |
+| Karthikeyan | ML Engineering | Demand Forecasting (LSTM/Prophet) |
+| Ayush | ML Engineering | Churn Prediction (XGBoost/SHAP) |
+| Pawan | Backend Engineering | FastAPI Serving Layer |
+| Nithish | Frontend Engineering | Streamlit Dashboard |
+
+---
+
+## License
+
+Proprietary — Amdox NeuralRetail Project
+
+---
+
+**Built with** ❤️ **by the NeuralRetail Team**

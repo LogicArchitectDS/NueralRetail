@@ -1,0 +1,16 @@
+{
+  "method": "OLS_with_DoWhy_backdoor",
+  "ate": -0.847,
+  "ate_interpretation": "A 1% price increase reduces demand by 0.847%",
+  "ols_r2": 0.9963,
+  "elasticity_coefficient": -0.847,
+  "confounders_adjusted": [
+    "seasonality",
+    "promotion",
+    "competitor_price"
+  ],
+  "refutation_passed": true,
+  "price_sensitivity": "ELASTIC",
+  "recommendation": "Price increases above 5% will significantly reduce demand",
+  "computed_at": "2026-04-29 15:32:28.660432"
+}

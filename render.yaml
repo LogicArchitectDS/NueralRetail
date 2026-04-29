@@ -1,0 +1,44 @@
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: neuralretail-api
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PORT
+        value: 8000
+      - key: API_URL
+        fromService:
+          name: neuralretail-api
+          type: web
+          envVarKey: RAILWAY_PUBLIC_DOMAIN
+      - key: MODEL_PATH
+        value: ./models
+      - key: LOG_LEVEL
+        value: INFO
+
+  # Streamlit Frontend Service
+  - type: web
+    name: neuralretail-app
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run src/app/streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PORT
+        value: 8501
+      - key: API_URL
+        fromService:
+          name: neuralretail-api
+          type: web
+          envVarKey: RAILWAY_PUBLIC_DOMAIN

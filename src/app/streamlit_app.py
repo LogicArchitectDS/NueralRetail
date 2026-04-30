@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 import io
 import yaml
-import streamlit_authenticator as stauth
 from yaml.loader import SafeLoader
 
 # Environment Configuration
@@ -24,17 +23,32 @@ def main():
         st.error("Authentication configuration missing. Please check config/auth_config.yaml.")
         return
 
-    authenticator = stauth.Authenticate(
-        config['credentials'],
-        config['cookie']['name'],
-        config['cookie']['key'],
-        config['cookie']['expiry_days']
-    )
-
-    # Render login widget
-    authenticator.login()
+    demo_passwords = {
+        "admin": "abc",
+        "executive": "def",
+        "analyst": "ghi",
+        "viewer": "jkl",
+    }
 
     auth_status = st.session_state.get("authentication_status")
+    if auth_status is not True:
+        with st.form("login_form"):
+            username = st.text_input("Username")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Login")
+
+        if submitted:
+            user_config = config["credentials"]["usernames"].get(username)
+            if user_config and demo_passwords.get(username) == password:
+                st.session_state["authentication_status"] = True
+                st.session_state["username"] = username
+                st.session_state["name"] = user_config.get("name", username)
+                st.rerun()
+            else:
+                st.session_state["authentication_status"] = False
+
+        auth_status = st.session_state.get("authentication_status")
+
     if auth_status is False:
         st.error('Username/password is incorrect')
         return
@@ -45,7 +59,11 @@ def main():
 
     # Successful login
     st.sidebar.success(f'Welcome *{st.session_state["name"]}*')
-    authenticator.logout('Logout', 'sidebar')
+    if st.sidebar.button("Logout"):
+        st.session_state["authentication_status"] = None
+        st.session_state.pop("username", None)
+        st.session_state.pop("name", None)
+        st.rerun()
     
     # Get user role for RBAC
     user_role = config['credentials']['usernames'][st.session_state["username"]].get('role', 'viewer')

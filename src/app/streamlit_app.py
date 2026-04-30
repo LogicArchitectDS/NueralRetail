@@ -28,17 +28,17 @@ def main():
         config['credentials'],
         config['cookie']['name'],
         config['cookie']['key'],
-        config['cookie']['expiry_days'],
-        config['pre-authorized']
+        config['cookie']['expiry_days']
     )
 
     # Render login widget
     authenticator.login()
 
-    if st.session_state["authentication_status"] is False:
+    auth_status = st.session_state.get("authentication_status")
+    if auth_status is False:
         st.error('Username/password is incorrect')
         return
-    elif st.session_state["authentication_status"] is None:
+    elif auth_status is None:
         st.warning('Please enter your username and password')
         st.info("Demo: admin/abc or executive/def")
         return

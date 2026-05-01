@@ -1,0 +1,36 @@
+# NeuralRetail API / ML requirements
+# Use this for FastAPI model serving deployments. Streamlit Cloud uses requirements.txt.
+
+pandas==2.2.0
+numpy==1.26.0
+scikit-learn==1.4.0
+xgboost<2.1.0
+polars==0.20.0
+pyarrow<16
+
+torch==2.3.0
+pytorch-lightning==2.3.0
+prophet>=1.1.0
+shap>=0.43.0
+imbalanced-learn==0.12.0
+optuna==3.6.0
+
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic>=2.5.0
+pydantic-settings==2.11.0
+httpx==0.27.0
+
+streamlit==1.35.0
+plotly==5.22.0
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+redis==5.0.0
+joblib>=1.3.0
+scipy>=1.12.0
+requests>=2.33.0
+python-multipart
+openpyxl>=3.1.0
+PyYAML>=6.0.0
+reportlab>=4.0.0
+lightgbm==4.3.0

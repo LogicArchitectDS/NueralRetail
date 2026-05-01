@@ -8,8 +8,12 @@ import yaml
 from yaml.loader import SafeLoader
 
 # Environment Configuration
-# Default to localhost:8000 for local dev, override via API_URL env var for PaaS
+# Default to localhost:8000 for local dev. Streamlit Cloud can override via secrets.
 API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+try:
+    API_URL = st.secrets.get("API_URL", API_URL)
+except Exception:
+    pass
 
 # Configure the page layout
 st.set_page_config(layout="wide", page_title="NeuralRetail Dashboard")

@@ -37,7 +37,7 @@ def test_monitoring_drift_has_psi(client):
     assert "overall_psi" in data
     assert data["drift_status"] in ["STABLE","DRIFT_DETECTED","NO_DATA","ERROR"]
 
-def test_monitoring_dq_has_score(client):
+def test_monitoring_dq_has_status(client):
     r = client.get("/monitoring/dq")
     assert r.status_code == 200
     data = r.json()
@@ -60,7 +60,10 @@ def test_pricing_causal_has_elasticity(client):
 
 def test_predict_churn(client):
     r = client.post("/predict/churn", json={"Frequency": 5, "Monetary": 500.0})
-    assert r.status_code in [200, 503]  # 503 if model loading in progress
+    assert r.status_code in [200, 503], f"Got {r.status_code}: {r.text}"
+    if r.status_code == 200:
+        data = r.json()
+        assert "churn_probability" in data or "prediction" in data or "score" in data
 
 def test_predict_churn_stack(client):
     r = client.post("/predict/churn/stack",
@@ -88,4 +91,27 @@ def test_export_crm_high_risk(client):
 
 def test_predict_segment(client):
     r = client.post("/predict/segment", json={"Frequency": 5, "Monetary": 500.0})
-    assert r.status_code in [200, 503]  # 503 if model loading in progress
+    assert r.status_code in [200, 503], f"Got {r.status_code}: {r.text}"
+    if r.status_code == 200:
+        data = r.json()
+        assert "segment" in data or "cluster" in data or "label" in data
+
+def test_executive_demand_forecast(client):
+    r = client.get("/executive/demand-forecast")
+    assert r.status_code == 200
+    data = r.json()
+    assert "forecast_values" in data
+    assert "mape" in data
+
+def test_export_crm_returns_csv(client):
+    r = client.get("/export/crm/high_risk")
+    assert r.status_code == 200
+    content_type = r.headers.get("content-type", "")
+    assert "csv" in content_type or "text" in content_type or len(r.text) > 10
+
+def test_monitoring_dq_has_score(client):
+    r = client.get("/monitoring/dq")
+    assert r.status_code == 200
+    data = r.json()
+    assert "dq_score" in data
+    assert data["dq_score"] >= 0

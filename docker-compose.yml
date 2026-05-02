@@ -1,16 +1,43 @@
-version: "3.9"
 services:
   api:
-    build: .
+    image: nueralretail_solo-api:latest
     ports:
       - "8000:8000"
     volumes:
-      - ./artifacts:/app/artifacts
+      - ./src:/app/src
       - ./models:/app/models
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
     environment:
       - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  app:
+    image: nueralretail_solo-app:latest
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+    environment:
+      - API_URL=http://api:8000
+      - LOG_LEVEL=INFO
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped

@@ -1,0 +1,40 @@
+{
+  "dq_score": 100.0,
+  "passed_checks": 5,
+  "total_checks": 5,
+  "status": "PASS",
+  "dataset_rows": 94983,
+  "validated_at": "2026-05-03 08:31:06.367834",
+  "checks": [
+    {
+      "check": "row_count_valid",
+      "passed": true,
+      "value": 94983,
+      "threshold": ">=100"
+    },
+    {
+      "check": "null_rate_acceptable",
+      "passed": true,
+      "value": 0.0,
+      "threshold": "<0.05"
+    },
+    {
+      "check": "monetary_non_negative",
+      "passed": true,
+      "value": 0,
+      "threshold": "0 negatives"
+    },
+    {
+      "check": "frequency_positive",
+      "passed": true,
+      "value": 0,
+      "threshold": "<1% zero"
+    },
+    {
+      "check": "no_duplicate_rows",
+      "passed": true,
+      "value": 0,
+      "threshold": "<1% duplicates"
+    }
+  ]
+}

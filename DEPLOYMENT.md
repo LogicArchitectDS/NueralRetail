@@ -2,11 +2,12 @@
 
 ## Quick Reference
 
-| Environment | Command | Access |
-|-------------|---------|--------|
-| **Local** | `docker-compose up -d` | localhost:8501 |
-| **Render** | Push to main branch | Auto-deploys |
-| **Railway** | Connect GitHub repo | Auto-deploys |
+| Environment | Command / Setup | Access |
+|-------------|------------------|--------|
+| **Local** | `docker compose up -d --build` | `http://localhost:8501` |
+| **Render** | Use `render.yaml` | Public HTTPS app + API |
+| **Railway** | Use root `Dockerfile` for API | Public HTTPS API |
+| **Streamlit Cloud** | Use `requirements.txt` | Public HTTPS dashboard |
 
 ---
 
@@ -15,205 +16,143 @@
 ### Prerequisites
 
 ```bash
-# Verify Docker is running
 docker --version
-docker-compose --version
-
-# Verify Python
-python --version  # Must be 3.12+
+docker compose version
+python3 --version
 ```
 
 ### Start Services
 
 ```bash
-# Build and start both API and Streamlit
-docker-compose up -d --build
+docker compose up -d --build
+docker compose ps
+docker compose logs -f api
+docker compose logs -f app
+```
 
-# Check service health
-docker-compose ps
+### Stop Services
 
-# View logs
-docker-compose logs -f api
-docker-compose logs -f app
-
-# Stop services
-docker-compose down
+```bash
+docker compose down
 ```
 
 ### Verify Health
 
 ```bash
-# API health check
 curl http://localhost:8000/health
-
-# Streamlit health check
 curl http://localhost:8501/_stcore/health
 ```
 
 ---
 
-## 2. Render Deployment
+## 2. Dependency Split
 
-### Step 1: Prepare Repository
+The repo intentionally uses two dependency files:
+
+- `requirements-api.txt`: FastAPI + ML serving dependencies
+- `requirements.txt`: lightweight Streamlit dashboard dependencies
+
+Container files already match this split:
+
+- `Dockerfile` and `Dockerfile.api` use `requirements-api.txt`
+- `Dockerfile.app` uses `requirements.txt`
+
+---
+
+## 3. Render Deployment
+
+Render is configured through `render.yaml` with two Docker services:
+
+- `neuralretail-api` using `Dockerfile.api`
+- `neuralretail-app` using `Dockerfile.app`
+
+### Deploy Steps
+
+1. Push the latest `main` branch to GitHub.
+2. In Render, create a new Blueprint and point it at this repository.
+3. Confirm both services are detected from `render.yaml`.
+4. If you rename the API service, update the app service `API_URL` env var to match the final API hostname.
+
+### Expected Endpoints
 
 ```bash
-# Ensure requirements.txt exists
-cat requirements.txt
-
-# Commit all changes
-git add .
-git commit -m "Prepare for PaaS deployment"
-git push origin main
-```
-
-### Step 2: Configure Render
-
-1. Go to [render.com](https://render.com) and sign in
-2. Click **New +** → **Web Service**
-3. Connect your GitHub repository
-4. Configure the service:
-
-**API Service:**
-| Field | Value |
-|-------|-------|
-| Name | `neuralretail-api` |
-| Environment | `Python` |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `uvicorn src.api.main:app --host 0.0.0.0 --port $PORT` |
-| Port | `8000` |
-
-**Environment Variables:**
-```
-PYTHON_VERSION=3.12.0
-PORT=8000
-LOG_LEVEL=INFO
-MODEL_PATH=./models
-```
-
-### Step 3: Deploy Streamlit Frontend
-
-1. Create another **Web Service**
-2. Configure:
-
-| Field | Value |
-|-------|-------|
-| Name | `neuralretail-app` |
-| Environment | `Python` |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `streamlit run src/app/streamlit_app.py --server.port $PORT --server.address 0.0.0.0` |
-| Port | `8501` |
-
-**Environment Variables:**
-```
-PYTHON_VERSION=3.12.0
-PORT=8501
-API_URL=https://neuralretail-api.onrender.com
+https://<api-service>.onrender.com/health
+https://<app-service>.onrender.com
 ```
 
 ---
 
-## 3. Railway Deployment
+## 4. Railway Deployment
 
-### Step 1: Connect Repository
+Railway in this repo is configured for the **API only**.
 
-1. Go to [railway.app](https://railway.app)
-2. Click **New Project** → **Deploy from GitHub**
-3. Select your repository
+- `railway.json` and `railway.toml` point Railway at the root `Dockerfile`
+- The root `Dockerfile` builds the FastAPI + ML API with `requirements-api.txt`
 
-### Step 2: Configure Service
+### Deploy API on Railway
 
-Railway auto-detects `pyproject.toml` and `railway.json`.
+1. Create a new Railway project from GitHub.
+2. Let Railway build from the checked-in Docker configuration.
+3. Expose the generated public API URL.
 
-**Environment Variables:**
-```
-PYTHON_VERSION=3.12.0
-PORT=8000
-API_URL=<will be auto-generated>
-```
+### Deploy Dashboard Separately
 
-### Step 3: Deploy Frontend
+For the Streamlit dashboard, use **Streamlit Cloud** with:
 
-1. Click **New** → **Empty Service**
-2. Set environment variables:
-```
-PYTHON_VERSION=3.12.0
-PORT=8501
-API_URL=<your-api-url>.railway.app
-```
-3. Add start command:
-```bash
-streamlit run src/app/streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+- App entrypoint: `src/app/streamlit_app.py`
+- Dependency file: `requirements.txt`
+- Secret:
+
+```toml
+API_URL = "https://<your-railway-api>.up.railway.app"
 ```
 
 ---
 
-## 4. Environment Variables Reference
+## 5. Streamlit Cloud
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `API_URL` | Backend API endpoint | `http://127.0.0.1:8000` | ✅ |
-| `PORT` | Service port (PaaS) | `8000` / `8501` | ✅ |
-| `LOG_LEVEL` | Logging verbosity | `INFO` | ❌ |
-| `MODEL_PATH` | Path to model artifacts | `./models` | ❌ |
-| `PYTHON_VERSION` | Runtime version | `3.12.0` | ✅ (PaaS) |
+### Required Settings
+
+- Repository: `LogicArchitectDS/NueralRetail_Solo`
+- Branch: `main`
+- Main file path: `src/app/streamlit_app.py`
+
+### Secrets
+
+Use `.streamlit/secrets.example.toml` as the template.
 
 ---
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
-### API Connection Failed
+### API Not Reachable
 
 ```bash
-# Check if API is running
-docker-compose ps api
-
-# Test health endpoint
+docker compose ps
+docker compose logs api
 curl http://localhost:8000/health
-
-# Check API logs
-docker-compose logs api
 ```
 
-### Models Not Loading
+### Streamlit Not Updating
 
 ```bash
-# Verify models exist in container
-docker-compose exec api ls -la /app/models/
-
-# If empty, rebuild with volume mount
-docker-compose down
-docker-compose up -d --build
+docker compose restart app
 ```
 
-### Streamlit Shows Stale Data
+### Rebuild from a Clean Clone
 
 ```bash
-# Force refresh by restarting
-docker-compose restart app
-
-# Or clear browser cache (Ctrl+Shift+R)
+docker compose down
+docker compose up -d --build
 ```
 
 ---
 
-## 6. Post-Deployment Checklist
+## 7. Final Submission Checklist
 
-- [ ] API health endpoint returns `{"status": "ok"}`
-- [ ] Streamlit dashboard loads without errors
-- [ ] All 5 navigation pages are accessible
-- [ ] Churn prediction returns valid JSON
-- [ ] Segmentation returns cluster ID
-- [ ] Inventory optimizer calculates EOQ
-- [ ] Price simulator shows elasticity
-- [ ] MLOps Monitor displays model table
-
----
-
-## 7. Cost Estimates
-
-| Platform | Free Tier | Starter Plan |
-|----------|-----------|--------------|
-| **Render** | 750 hrs/month | $7/month |
-| **Railway** | $5 credit/month | $5/month |
-
-> **Note:** Free tiers may have sleep mode. Upgrade for production use.
+- [ ] `README.md` updated with final public app URL
+- [ ] `README.md` updated with final walkthrough video URL
+- [ ] API health endpoint reachable publicly
+- [ ] Streamlit dashboard reachable publicly over HTTPS
+- [ ] All dashboard pages load without runtime errors
+- [ ] Smoke test suite passes

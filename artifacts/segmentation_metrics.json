@@ -1,0 +1,23 @@
+{
+  "model": "K-Means (k=6) + DBSCAN + GMM",
+  "silhouette_score": 0.609,
+  "silhouette_target": 0.55,
+  "silhouette_met": true,
+  "n_segments": 6,
+  "segment_range_target": "6-10",
+  "segment_range_met": true,
+  "stability_week_on_week": 0.84,
+  "stability_target": 0.8,
+  "stability_met": true,
+  "stability_method": "Jaccard similarity of segment assignments across rolling 7-day windows",
+  "davies_bouldin": 0.82,
+  "personas": [
+    "Champions",
+    "Loyal Customers",
+    "Potential Loyalists",
+    "At Risk",
+    "Hibernating",
+    "Lost"
+  ],
+  "computed_at": "2026-05-02 22:40:20.887942"
+}

@@ -1,0 +1,14 @@
+{
+  "task": "feature_engineering",
+  "status": "SUCCESS",
+  "rows_processed": 94983,
+  "features_created": [
+    "customer_unique_id",
+    "frequency",
+    "monetary",
+    "recency",
+    "is_churned",
+    "log_monetary"
+  ],
+  "timestamp": "2026-05-03 08:31:06.387698"
+}

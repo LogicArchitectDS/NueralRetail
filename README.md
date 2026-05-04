@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.35-red)](https://streamlit.io)
-[![Tests](https://img.shields.io/badge/Tests-14%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-15%20passing-brightgreen)]()
 
 ## 🎯 Project Overview
 End-to-end AI platform for retail analytics: demand forecasting, churn prediction,
@@ -26,6 +26,16 @@ customer segmentation, inventory optimization, and revenue intelligence.
 The Prophet+LSTM architecture is production-grade. With M5/RetailRocket data, MAPE
 would fall within the ≤10% target. This limitation is documented in the dashboard.
 
+## Metrics Summary
+| Module | Key Metric | Value | Target | Status |
+|---|---|---|---|---|
+| Segmentation | Silhouette | 0.609 | ≥0.55 | ✅ Met |
+| Churn | AUC-ROC | 1.0000 | ≥0.90 | ✅ Met |
+| Pricing | Elasticity R² | 0.9963 | ≥0.72 | ✅ Met |
+| Inventory | Dead Stock | 0.87 | ≥0.85 | ✅ Met |
+| Forecasting | PI Coverage | 95.86% | ≥88% | ✅ Met |
+| Forecasting | MAPE | 168% | ≤10% | ⚠️ Data limitation |
+
 ## 🏗️ Architecture
 Five-layer MLOps pipeline:
 1. **Data Ingestion** — PySpark + Great Expectations DQ gates
@@ -40,7 +50,7 @@ Five-layer MLOps pipeline:
 
 ### Local Setup
 ```bash
-git clone https://github.com/YOUR_USERNAME/NueralRetail_Solo.git
+git clone https://github.com/LogicArchitectDS/NueralRetail_Solo.git
 cd NueralRetail_Solo
 poetry install
 poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
@@ -62,7 +72,7 @@ poetry run streamlit run src/app/streamlit_app.py
 
 ### Run Tests
 ```bash
-poetry run pytest tests/test_api_smoke.py -v -p no:asyncio
+poetry run python -m pytest tests/test_api_smoke.py -v -p no:asyncio
 ```
 
 ## 📁 Project Structure
@@ -77,8 +87,9 @@ NueralRetail_Solo/
 ├── dags/ # Airflow DAG definitions
 ├── tests/ # Pytest smoke tests
 ├── mlruns/ # MLflow experiment tracking
-├── requirements.txt # Full dependencies
-├── Dockerfile # Container definition
+├── requirements.txt # Streamlit deployment dependencies
+├── requirements-api.txt # FastAPI / ML deployment dependencies
+├── Dockerfile # API container definition
 └── docker-compose.yml # Local stack
 
 ## 🔬 MLOps Pipeline
@@ -88,6 +99,7 @@ NueralRetail_Solo/
 - **Data Quality**: Great Expectations with 5-check validation suite
 
 ## 📝 Submission
+- **Repository**: https://github.com/LogicArchitectDS/NueralRetail_Solo
 - **Report**: See PDF report for full architecture and methodology
-- **Live Demo**: [DEPLOYMENT_URL_HERE]
-- **Video**: [VIDEO_URL_HERE]
+- **Live Demo**: Add your final public HTTPS app URL here before evaluator submission. Local Docker demo runs at `http://localhost:8501`.
+- **Video**: Add your final walkthrough link here before evaluator submission.

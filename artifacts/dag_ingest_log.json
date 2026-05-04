@@ -1,0 +1,15 @@
+{
+  "task": "ingest_bronze",
+  "status": "SUCCESS",
+  "sources_loaded": [
+    {
+      "file": "artifacts/rfm_features.parquet",
+      "rows": 94983,
+      "cols": 5
+    }
+  ],
+  "elapsed_seconds": 0.158,
+  "sla_target_seconds": 240,
+  "sla_met": true,
+  "timestamp": "2026-05-03 08:31:01.943342"
+}

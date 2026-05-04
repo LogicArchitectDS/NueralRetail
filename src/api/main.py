@@ -793,3 +793,54 @@ def trigger_retraining(background_tasks: BackgroundTasks):
     """
     background_tasks.add_task(run_retraining_flow)
     return {"status": "Retraining triggered", "models": ["XGBoost", "Stacked Ensemble"]}
+
+
+@app.get("/metrics/churn")
+def metrics_churn():
+    """Churn model acceptance criteria metrics"""
+    import json, os
+    path = "artifacts/churn_model_metrics.json"
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {"error": "Run: poetry run python3 scripts/generate_metrics.py"}
+
+@app.get("/metrics/forecast")
+def metrics_forecast():
+    """Demand forecast acceptance criteria metrics"""
+    import json, os
+    path = "artifacts/demand_forecast_summary.json"
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {"error": "Forecast metrics not generated yet"}
+
+@app.get("/metrics/segmentation")
+def metrics_segmentation():
+    """Segmentation acceptance criteria metrics"""
+    import json, os
+    path = "artifacts/segmentation_metrics.json"
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {"error": "Segmentation metrics not generated yet"}
+
+@app.get("/metrics/all")
+def metrics_all():
+    """All acceptance criteria metrics in one call"""
+    import json, os
+    result = {}
+    files = {
+        "churn": "artifacts/churn_model_metrics.json",
+        "forecast": "artifacts/demand_forecast_summary.json",
+        "segmentation": "artifacts/segmentation_metrics.json",
+        "price": "artifacts/price_intelligence_metrics.json",
+        "inventory": "artifacts/inventory_metrics.json",
+    }
+    for key, path in files.items():
+        if os.path.exists(path):
+            with open(path) as f:
+                result[key] = json.load(f)
+        else:
+            result[key] = {"status": "not_generated"}
+    return result

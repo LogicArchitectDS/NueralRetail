@@ -1,0 +1,24 @@
+{
+  "model": "OLS + DoWhy Backdoor Causal",
+  "elasticity_r2": 0.9963,
+  "r2_target": 0.72,
+  "r2_met": true,
+  "ate": -0.847,
+  "ate_interpretation": "1% price increase reduces demand by 0.847%",
+  "price_sensitivity": "ELASTIC",
+  "confounders_adjusted": [
+    "seasonality",
+    "promotion",
+    "competitor_price"
+  ],
+  "refutation_passed": true,
+  "simulator_tested": true,
+  "simulator_response_ms": 145,
+  "simulator_response_target_ms": 2000,
+  "simulator_response_met": true,
+  "attribution_method": "pre_post_with_synthetic_control",
+  "attribution_confidence": 0.91,
+  "attribution_confidence_target": 0.9,
+  "attribution_confidence_met": true,
+  "computed_at": "2026-05-02 22:40:20.879864"
+}

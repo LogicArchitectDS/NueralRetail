@@ -1,5 +1,8 @@
 services:
   api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
     image: nueralretail_solo-api:latest
     ports:
       - "8000:8000"
@@ -20,6 +23,9 @@ services:
     restart: unless-stopped
 
   app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
     image: nueralretail_solo-app:latest
     ports:
       - "8501:8501"

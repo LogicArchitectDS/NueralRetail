@@ -45,6 +45,9 @@ terraform.rc
 *.swp
 *.swo
 
+# Streamlit local secrets
+.streamlit/secrets.toml
+
 # Logs
 logs/
 *.log

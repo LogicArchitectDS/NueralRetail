@@ -1,0 +1,63 @@
+{
+  "mlflow_tracking": true,
+  "experiments_found": 3,
+  "total_runs": 10,
+  "registered_models": [
+    {
+      "name": "churn_stacked_classifier",
+      "stage": "Production",
+      "version": "1",
+      "auc": 1.0
+    },
+    {
+      "name": "customer_segmentation_kmeans",
+      "stage": "Production",
+      "version": "1",
+      "silhouette": 0.609
+    },
+    {
+      "name": "demand_prophet_lstm",
+      "stage": "Production",
+      "version": "1",
+      "mape": 113.0
+    },
+    {
+      "name": "price_elasticity_ols_dowhy",
+      "stage": "Production",
+      "version": "1",
+      "r2": 0.9963
+    }
+  ],
+  "champion_challenger_enabled": true,
+  "promotion_gate": "New model must beat champion by >=5% on hold-out set",
+  "recent_runs": [
+    {
+      "experiment": "628707292317340380",
+      "run_id": "35af26ef",
+      "ensemble_mape": 0.0
+    },
+    {
+      "experiment": "628707292317340380",
+      "run_id": "523a6193",
+      "ensemble_mape": 0.0
+    },
+    {
+      "experiment": "0",
+      "run_id": "2794a6f8",
+      "auc_roc": 0.0,
+      "f1_score": 0.0
+    },
+    {
+      "experiment": "0",
+      "run_id": "64c85560",
+      "dbscan_n_clusters": 0.0,
+      "dbscan_noise_pct": 0.0,
+      "dbscan_silhouette": 0.0
+    },
+    {
+      "experiment": "0",
+      "run_id": "2068b4a8"
+    }
+  ],
+  "generated_at": "2026-05-03 08:22:45.041970"
+}

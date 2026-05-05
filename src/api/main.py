@@ -75,45 +75,51 @@ gmm_scaler = None
 stacked_model = None
 stacked_explainer = None
 
-@app.on_event("startup")
 def load_models():
+    """Load all ML model artifacts from disk into global variables."""
     global xgboost_model, shap_explainer, kmeans_scaler, kmeans_model, gmm_model, gmm_scaler, stacked_model, stacked_explainer
 
+    # Load XGBoost churn model
+    if os.path.exists("models/xgboost_churn.pkl"):
+        xgboost_model = joblib.load("models/xgboost_churn.pkl")
+        
+    # Load Stacked Churn Model
+    if os.path.exists("models/stacked_churn_model.pkl"):
+        stacked_model = joblib.load("models/stacked_churn_model.pkl")
+
+    # Load SHAP explainer
+    if os.path.exists("models/shap_explainer.pkl"):
+        shap_explainer = joblib.load("models/shap_explainer.pkl")
+        
+    if os.path.exists("models/stacked_shap_explainer.pkl"):
+        stacked_explainer = joblib.load("models/stacked_shap_explainer.pkl")
+
+    # Load KMeans scaler
+    if os.path.exists("models/kmeans_scaler.pkl"):
+        kmeans_scaler = joblib.load("models/kmeans_scaler.pkl")
+
+    # Load KMeans model
+    if os.path.exists("models/kmeans_model.pkl"):
+        kmeans_model = joblib.load("models/kmeans_model.pkl")
+
+    # GMM and DBSCAN loaders — advanced segmentation (F-02)
+    if os.path.exists("artifacts/gmm_model.pkl"):
+        with open("artifacts/gmm_model.pkl", "rb") as f:
+            gmm_model = pickle.load(f)
+    if os.path.exists("artifacts/gmm_scaler.pkl"):
+        with open("artifacts/gmm_scaler.pkl", "rb") as f:
+            gmm_scaler = pickle.load(f)
+
+    logger.info("Model loading check complete.")
+
+
+@app.on_event("startup")
+async def startup_event():
     try:
-        # Load XGBoost churn model
-        if os.path.exists("models/xgboost_churn.pkl"):
-            xgboost_model = joblib.load("models/xgboost_churn.pkl")
-            
-        # Load Stacked Churn Model
-        if os.path.exists("models/stacked_churn_model.pkl"):
-            stacked_model = joblib.load("models/stacked_churn_model.pkl")
-
-        # Load SHAP explainer
-        if os.path.exists("models/shap_explainer.pkl"):
-            shap_explainer = joblib.load("models/shap_explainer.pkl")
-            
-        if os.path.exists("models/stacked_shap_explainer.pkl"):
-            stacked_explainer = joblib.load("models/stacked_shap_explainer.pkl")
-
-        # Load KMeans scaler
-        if os.path.exists("models/kmeans_scaler.pkl"):
-            kmeans_scaler = joblib.load("models/kmeans_scaler.pkl")
-
-        # Load KMeans model
-        if os.path.exists("models/kmeans_model.pkl"):
-            kmeans_model = joblib.load("models/kmeans_model.pkl")
-
-        # GMM and DBSCAN loaders — advanced segmentation (F-02)
-        if os.path.exists("artifacts/gmm_model.pkl"):
-            with open("artifacts/gmm_model.pkl", "rb") as f:
-                gmm_model = pickle.load(f)
-        if os.path.exists("artifacts/gmm_scaler.pkl"):
-            with open("artifacts/gmm_scaler.pkl", "rb") as f:
-                gmm_scaler = pickle.load(f)
-
-        print("Model loading check complete.")
+        load_models()
     except Exception as e:
-        print(f"Error loading models: {e}")
+        logger.error(f"Model loading failed: {e}")
+        # Don't raise — let the app start anyway so /health responds
 
 @app.get("/health")
 def health_check():

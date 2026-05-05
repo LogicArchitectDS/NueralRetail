@@ -107,7 +107,8 @@ def task_drift_check(**context):
     import requests
 
     try:
-        r = requests.get("http://localhost:8000/monitoring/drift", timeout=10)
+        api_base_url = os.getenv("API_BASE_URL", "https://neuralretail-api.onrender.com")
+        r = requests.get(f"{api_base_url}/monitoring/drift", timeout=10)
         drift_data = r.json()
     except Exception:
         import sys

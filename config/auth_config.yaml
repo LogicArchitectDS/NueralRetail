@@ -1,7 +1,7 @@
 credentials:
   usernames:
     admin:
-      email: admin@neuralretail.ai
+      email: [EMAIL_ADDRESS]
       name: System Administrator
       password: $2b$12$eDiKPE3DjP4eumK0ibFolOPMCRMRPgkwDv7UOLjfY0mHr7hzCR4cm # abc
       role: admin

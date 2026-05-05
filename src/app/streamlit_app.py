@@ -8,13 +8,17 @@ import yaml
 from yaml.loader import SafeLoader
 
 # Environment Configuration
-# Default to localhost:8000 for local dev. Streamlit Cloud can override via secrets.
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
-try:
-    API_URL = st.secrets.get("API_URL", API_URL)
-except Exception:
-    pass
-API_BASE_URL = API_URL
+API_BASE_URL = st.secrets.get(
+    "API_BASE_URL",
+    "https://neuralretail-api.onrender.com"
+)
+
+def check_api_health():
+    try:
+        response = requests.get(f"{API_BASE_URL}/health", timeout=10)
+        return response.status_code == 200
+    except Exception:
+        return False
 
 # Configure the page layout
 st.set_page_config(layout="wide", page_title="NeuralRetail Dashboard")
@@ -240,7 +244,16 @@ def main():
         @st.cache_data(ttl=60)
         def fetch_live_kpis():
             try:
-                resp = _req.get(f"{API_URL}/kpis", timeout=10)
+                if not check_api_health():
+                    return {
+                        "total_revenue": "API Offline",
+                        "active_customers": "—",
+                        "avg_churn_risk": "—",
+                        "active_skus": "—",
+                        "drift_status": "UNKNOWN",
+                        "last_updated": "—"
+                    }
+                resp = _req.get(f"{API_BASE_URL}/kpis", timeout=10)
                 if resp.status_code == 200:
                     return resp.json()
             except Exception:
@@ -277,7 +290,7 @@ def main():
         # 2. Revenue Trend Chart (Retained for visual completeness)
         st.subheader("Last 30-Day Transaction Volume Trend")
         try:
-            trend_resp = requests.get(f"{API_URL}/executive/revenue-trend", timeout=5)
+            trend_resp = requests.get(f"{API_BASE_URL}/executive/revenue-trend", timeout=5)
             if trend_resp.status_code == 200:
                 trend_data = trend_resp.json()
                 if trend_data:
@@ -364,11 +377,11 @@ def main():
             with st.spinner("Analyzing customer profile..."):
                 try:
                     # Send POST requests to our microservice
-                    churn_resp = requests.post(f"{API_URL}/predict/churn", json=payload)
+                    churn_resp = requests.post(f"{API_BASE_URL}/predict/churn", json=payload)
                     churn_resp.raise_for_status()
                     churn_data = churn_resp.json()
                     
-                    segment_resp = requests.post(f"{API_URL}/predict/segment", json=payload)
+                    segment_resp = requests.post(f"{API_BASE_URL}/predict/segment", json=payload)
                     segment_resp.raise_for_status()
                     segment_data = segment_resp.json()
                     
@@ -506,7 +519,7 @@ def main():
             
             with st.spinner("Calculating optimization metrics..."):
                 try:
-                    resp = requests.post(f"{API_URL}/inventory/optimize", json=payload)
+                    resp = requests.post(f"{API_BASE_URL}/inventory/optimize", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     
@@ -575,7 +588,7 @@ def main():
             
             with st.spinner("Simulating revenue impact..."):
                 try:
-                    resp = requests.post(f"{API_URL}/price/simulate", json=payload)
+                    resp = requests.post(f"{API_BASE_URL}/price/simulate", json=payload)
                     resp.raise_for_status()
                     data = resp.json()
                     

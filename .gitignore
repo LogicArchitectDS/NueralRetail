@@ -61,7 +61,6 @@ desktop.ini
 artifacts/*.csv
 artifacts/*.parquet
 data/
-models/
 spark-warehouse/
 metastore_db/
 derby.log/

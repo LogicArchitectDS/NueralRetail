@@ -312,10 +312,10 @@ def main():
             if trend_data:
                 df_trend = pd.DataFrame(trend_data)
                 df_trend['Date'] = pd.to_datetime(df_trend['Date'])
-                    df_trend = df_trend.set_index('Date')
-                    st.line_chart(df_trend)
-                else:
-                    st.info("No trend data available.")
+                df_trend = df_trend.set_index('Date')
+                st.line_chart(df_trend)
+            else:
+                st.info("No trend data available.")
         except:
             st.warning("Trend chart unavailable (API Offline)")
 

@@ -276,8 +276,8 @@ def main():
                         "last_updated": "—"
                     }
                 return safe_api_request("GET", "/kpis")
-            except Exception:
-                pass
+            except Exception as e:
+                st.error(f"KPI Fetch Error: {e}")
             return {
                 "total_revenue": "API Offline",
                 "active_customers": "—",
@@ -318,8 +318,8 @@ def main():
                 st.line_chart(df_trend)
             else:
                 st.info("No trend data available.")
-        except:
-            st.warning("Trend chart unavailable (API Offline)")
+        except Exception as e:
+            st.warning(f"Trend chart unavailable: {e}")
 
     elif menu == "Demand Intelligence":
         st.header("📈 Demand Intelligence")

@@ -20,6 +20,27 @@ def check_api_health():
     except Exception:
         return False
 
+def safe_api_request(method, endpoint, **kwargs):
+    url = f"{API_BASE_URL}{endpoint}"
+    response = requests.request(method, url, timeout=kwargs.pop("timeout", 20), **kwargs)
+    
+    try:
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        status = response.status_code if response else "N/A"
+        body = response.text[:300] if response else str(e)
+        raise RuntimeError(f"API call failed: {method} {url} -> {status}: {body}") from e
+
+    content_type = response.headers.get("content-type", "")
+    if "application/json" not in content_type.lower():
+        raise ValueError(
+            f"Non-JSON response from {url}. "
+            f"Status={response.status_code}, Content-Type={content_type}, "
+            f"Body={response.text[:300]}"
+        )
+
+    return response.json()
+
 # Configure the page layout
 st.set_page_config(layout="wide", page_title="NeuralRetail Dashboard")
 
@@ -88,8 +109,7 @@ def render_customer_360(customer_id, churn_prob, segment, frequency, monetary):
 def render_acceptance_metrics():
     """Render acceptance criteria metrics from /metrics/all."""
     try:
-        r = requests.get(f"{API_BASE_URL}/metrics/all", timeout=10)
-        data = r.json()
+        data = safe_api_request("GET", "/metrics/all")
 
         st.subheader("📋 Acceptance Criteria Status")
         metrics_display = []
@@ -253,9 +273,7 @@ def main():
                         "drift_status": "UNKNOWN",
                         "last_updated": "—"
                     }
-                resp = _req.get(f"{API_BASE_URL}/kpis", timeout=10)
-                if resp.status_code == 200:
-                    return resp.json()
+                return safe_api_request("GET", "/kpis")
             except Exception:
                 pass
             return {
@@ -290,12 +308,10 @@ def main():
         # 2. Revenue Trend Chart (Retained for visual completeness)
         st.subheader("Last 30-Day Transaction Volume Trend")
         try:
-            trend_resp = requests.get(f"{API_BASE_URL}/executive/revenue-trend", timeout=5)
-            if trend_resp.status_code == 200:
-                trend_data = trend_resp.json()
-                if trend_data:
-                    df_trend = pd.DataFrame(trend_data)
-                    df_trend['Date'] = pd.to_datetime(df_trend['Date'])
+            trend_data = safe_api_request("GET", "/executive/revenue-trend", timeout=5)
+            if trend_data:
+                df_trend = pd.DataFrame(trend_data)
+                df_trend['Date'] = pd.to_datetime(df_trend['Date'])
                     df_trend = df_trend.set_index('Date')
                     st.line_chart(df_trend)
                 else:
@@ -307,8 +323,7 @@ def main():
         st.header("📈 Demand Intelligence")
 
         try:
-            r = requests.get(f"{API_BASE_URL}/executive/demand-forecast", timeout=10)
-            data = r.json()
+            data = safe_api_request("GET", "/executive/demand-forecast")
 
             col1, col2, col3 = st.columns(3)
             col1.metric("Forecast Model", data.get("model", "Prophet+LSTM"))
@@ -348,8 +363,7 @@ def main():
             st.plotly_chart(fig, use_container_width=True)
 
         except Exception as e:
-            st.error(f"Could not load forecast data: {e}")
-            st.info("Start the FastAPI server: poetry run uvicorn src.api.main:app --port 8000")
+            st.error(str(e))
 
     elif menu == "Customer Intelligence Hub":
         st.header("Customer Intelligence Hub")
@@ -377,13 +391,8 @@ def main():
             with st.spinner("Analyzing customer profile..."):
                 try:
                     # Send POST requests to our microservice
-                    churn_resp = requests.post(f"{API_BASE_URL}/predict/churn", json=payload)
-                    churn_resp.raise_for_status()
-                    churn_data = churn_resp.json()
-                    
-                    segment_resp = requests.post(f"{API_BASE_URL}/predict/segment", json=payload)
-                    segment_resp.raise_for_status()
-                    segment_data = segment_resp.json()
+                    churn_data = safe_api_request("POST", "/predict/churn", json=payload)
+                    segment_data = safe_api_request("POST", "/predict/segment", json=payload)
                     
                     # Parse results
                     churn_prob = churn_data.get("churn_probability", 0.0)
@@ -430,8 +439,8 @@ def main():
                         except TypeError:
                             st.bar_chart(shap_df)
                             
-                except requests.exceptions.RequestException as e:
-                    st.error(f"Error communicating with the API: {e}")
+                except Exception as e:
+                    st.error(str(e))
 
         st.divider()
         st.subheader("Churn Heatmap")
@@ -468,15 +477,13 @@ def main():
             try:
                 if st.button("Fetch High-Risk CRM List"):
                     resp = requests.get(f"{API_BASE_URL}/export/crm/high_risk")
-                    if resp.status_code == 200:
-                        st.download_button(
-                            label="📥 Download High_Risk_CRM.csv",
-                            data=resp.content,
-                            file_name="high_risk_crm_list.csv",
-                            mime="text/csv"
-                        )
-                    else:
-                        st.error(f"API Error: {resp.status_code}")
+                    resp.raise_for_status()
+                    st.download_button(
+                        label="📥 Download High_Risk_CRM.csv",
+                        data=resp.content,
+                        file_name="high_risk_crm_list.csv",
+                        mime="text/csv"
+                    )
             except Exception as e:
                 st.error(f"Connection failed: {e}")
 
@@ -519,9 +526,7 @@ def main():
             
             with st.spinner("Calculating optimization metrics..."):
                 try:
-                    resp = requests.post(f"{API_BASE_URL}/inventory/optimize", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
+                    data = safe_api_request("POST", "/inventory/optimize", json=payload)
                     
                     st.subheader("Optimization Results")
                     m1, m2, m3 = st.columns(3)
@@ -529,8 +534,8 @@ def main():
                     m2.metric("Safety Stock", f"{data['safety_stock']} units")
                     m3.metric("Reorder Point", f"{data['reorder_point']:.2f} units")
                     
-                except requests.exceptions.RequestException as e:
-                    st.error(f"API Error: {e}")
+                except Exception as e:
+                    st.error(str(e))
 
         # ── ABC-XYZ Demo Section ────────────────────────────────────────────
         st.divider()
@@ -588,9 +593,7 @@ def main():
             
             with st.spinner("Simulating revenue impact..."):
                 try:
-                    resp = requests.post(f"{API_BASE_URL}/price/simulate", json=payload)
-                    resp.raise_for_status()
-                    data = resp.json()
+                    data = safe_api_request("POST", "/price/simulate", json=payload)
                     
                     elasticity = data['elasticity_coefficient']
                     st.subheader("Simulation Insights")
@@ -605,8 +608,8 @@ def main():
                     elif elasticity > -1 and elasticity < 0:
                         st.info("Inelastic Demand: Demand is relatively insensitive to price changes.")
                         
-                except requests.exceptions.RequestException as e:
-                    st.error(f"API Error: {e}")
+                except Exception as e:
+                    st.error(str(e))
 
     elif menu == "MLOps Monitor":
         st.header("🔬 MLOps Monitor")
@@ -616,8 +619,7 @@ def main():
         with col1:
             st.subheader("Drift Detection")
             try:
-                r = requests.get(f"{API_BASE_URL}/monitoring/drift", timeout=10)
-                d = r.json()
+                d = safe_api_request("GET", "/monitoring/drift")
                 status_color = "🟢" if d.get("drift_status") == "STABLE" else "🔴"
                 st.metric("Drift Status", f"{status_color} {d.get('drift_status', 'N/A')}")
                 st.metric("Overall PSI", d.get("overall_psi", "N/A"))
@@ -631,8 +633,7 @@ def main():
         with col2:
             st.subheader("Data Quality")
             try:
-                r = requests.get(f"{API_BASE_URL}/monitoring/dq", timeout=10)
-                d = r.json()
+                d = safe_api_request("GET", "/monitoring/dq")
                 score = d.get("dq_score", 0)
                 st.metric("DQ Score", f"{score}%")
                 st.metric("Status", d.get("status", "N/A"))
@@ -646,8 +647,7 @@ def main():
         st.subheader("Auto-Retrain Trigger")
         if st.button("🔄 Check & Trigger Retrain"):
             try:
-                r = requests.post(f"{API_BASE_URL}/monitoring/retrain", timeout=30)
-                d = r.json()
+                d = safe_api_request("POST", "/monitoring/retrain", timeout=30)
                 st.success(f"Action: {d.get('action_taken')} | PSI: {d.get('overall_psi')}")
                 st.json(d)
             except Exception as e:

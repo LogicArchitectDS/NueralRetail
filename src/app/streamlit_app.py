@@ -10,7 +10,7 @@ from yaml.loader import SafeLoader
 # Environment Configuration
 API_BASE_URL = st.secrets.get(
     "API_BASE_URL",
-    "https://neuralretail-api.onrender.com"
+    "https://nueralretail-api.onrender.com"
 )
 
 def check_api_health():
@@ -22,13 +22,15 @@ def check_api_health():
 
 def safe_api_request(method, endpoint, **kwargs):
     url = f"{API_BASE_URL}{endpoint}"
-    response = requests.request(method, url, timeout=kwargs.pop("timeout", 20), **kwargs)
+    timeout = kwargs.pop("timeout", 20)
     
     try:
+        response = requests.request(method, url, timeout=timeout, **kwargs)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        status = response.status_code if response else "N/A"
-        body = response.text[:300] if response else str(e)
+        response_obj = getattr(e, "response", None)
+        status = response_obj.status_code if response_obj is not None else "N/A"
+        body = response_obj.text[:300] if response_obj is not None else str(e)
         raise RuntimeError(f"API call failed: {method} {url} -> {status}: {body}") from e
 
     content_type = response.headers.get("content-type", "")
@@ -185,7 +187,7 @@ def render_acceptance_metrics():
         if metrics_display:
             st.dataframe(pd.DataFrame(metrics_display), use_container_width=True)
         else:
-            st.info("Start API server to load metrics")
+            st.info("No metrics available. Please check the backend API.")
     except Exception as e:
         st.warning(f"Metrics API unavailable: {e}")
 
@@ -474,9 +476,9 @@ def main():
         with exp_col2:
             st.warning("Export list of high-risk customers for CRM targeting.")
             # High Risk CSV Export (via API)
-            try:
-                if st.button("Fetch High-Risk CRM List"):
-                    resp = requests.get(f"{API_BASE_URL}/export/crm/high_risk")
+            if st.button("Fetch High-Risk CRM List"):
+                try:
+                    resp = requests.get(f"{API_BASE_URL}/export/crm/high_risk", timeout=20)
                     resp.raise_for_status()
                     st.download_button(
                         label="📥 Download High_Risk_CRM.csv",
@@ -484,8 +486,11 @@ def main():
                         file_name="high_risk_crm_list.csv",
                         mime="text/csv"
                     )
-            except Exception as e:
-                st.error(f"Connection failed: {e}")
+                except requests.exceptions.RequestException as e:
+                    response_obj = getattr(e, "response", None)
+                    status = response_obj.status_code if response_obj is not None else "N/A"
+                    body = response_obj.text[:300] if response_obj is not None else str(e)
+                    st.error(f"API call failed: GET {API_BASE_URL}/export/crm/high_risk -> {status}: {body}")
 
         if SEGMENT_PERSONAS:
             st.subheader("Segment Personas")

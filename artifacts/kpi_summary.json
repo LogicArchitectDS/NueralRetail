@@ -1,0 +1,15 @@
+{
+  "total_revenue": 13494400.74,
+  "avg_order_value": 142.07,
+  "active_customers": 94983,
+  "avg_purchase_frequency": 1.03,
+  "avg_churn_risk": 60.2,
+  "high_risk_customers": 57180,
+  "active_skus": 94983,
+  "segmentation_silhouette": 0.609,
+  "price_r2": 0.9963,
+  "models_in_production": 4,
+  "last_updated": "2026-05-08 09:46 UTC",
+  "drift_status": "STABLE",
+  "overall_psi": 0.0006
+}

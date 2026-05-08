@@ -136,29 +136,40 @@ def get_kpis():
 
     result = {}
 
+    # First preference for deployment environments like Render:
+    # use a lightweight committed JSON snapshot when parquet artifacts are not present.
+    try:
+        summary_path = "artifacts/kpi_summary.json"
+        if os.path.exists(summary_path):
+            with open(summary_path) as f:
+                result = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not read KPI summary snapshot: {e}")
+
     # --- Total Revenue ---
     try:
-        import pandas as pd
-        for path in ["artifacts/rfm_features.parquet","artifacts/rfm_features.csv"]:
-            if os.path.exists(path):
-                df = pd.read_parquet(path) if path.endswith(".parquet") else pd.read_csv(path)
-                df.columns = df.columns.str.lower().str.strip()
-                money_col = next((c for c in df.columns if any(k in c for k in
-                    ["monetary","revenue","sales","amount","value","spend"])), None)
-                id_col = next((c for c in df.columns if any(k in c for k in
-                    ["customer","id","user","unique"])), None)
-                freq_col = next((c for c in df.columns if any(k in c for k in
-                    ["frequency","freq","orders","count","purchase"])), None)
-                if money_col:
-                    result["total_revenue"] = round(float(df[money_col].sum()), 2)
-                    result["avg_order_value"] = round(float(df[money_col].mean()), 2)
-                else:
-                    result["total_revenue"] = 0
-                    result["avg_order_value"] = 0
-                result["active_customers"] = int(df[id_col].nunique()) if id_col else int(len(df))
-                if freq_col:
-                    result["avg_purchase_frequency"] = round(float(df[freq_col].mean()), 2)
-                break
+        if "total_revenue" not in result:
+            import pandas as pd
+            for path in ["artifacts/rfm_features.parquet","artifacts/rfm_features.csv"]:
+                if os.path.exists(path):
+                    df = pd.read_parquet(path) if path.endswith(".parquet") else pd.read_csv(path)
+                    df.columns = df.columns.str.lower().str.strip()
+                    money_col = next((c for c in df.columns if any(k in c for k in
+                        ["monetary","revenue","sales","amount","value","spend"])), None)
+                    id_col = next((c for c in df.columns if any(k in c for k in
+                        ["customer","id","user","unique"])), None)
+                    freq_col = next((c for c in df.columns if any(k in c for k in
+                        ["frequency","freq","orders","count","purchase"])), None)
+                    if money_col:
+                        result["total_revenue"] = round(float(df[money_col].sum()), 2)
+                        result["avg_order_value"] = round(float(df[money_col].mean()), 2)
+                    else:
+                        result["total_revenue"] = 0
+                        result["avg_order_value"] = 0
+                    result["active_customers"] = int(df[id_col].nunique()) if id_col else int(len(df))
+                    if freq_col:
+                        result["avg_purchase_frequency"] = round(float(df[freq_col].mean()), 2)
+                    break
         if "total_revenue" not in result:
             result["total_revenue"] = 0
             result["active_customers"] = 0
@@ -169,22 +180,23 @@ def get_kpis():
 
     # --- Churn Risk Average ---
     try:
-        for path in ["artifacts/churn_scores.parquet","artifacts/churn_scores.csv",
-                     "artifacts/rfm_features.parquet","artifacts/rfm_features.csv"]:
-            if os.path.exists(path):
-                df = pd.read_parquet(path) if path.endswith(".parquet") else pd.read_csv(path)
-                df.columns = df.columns.str.lower().str.strip()
-                score_col = next((c for c in df.columns if any(k in c for k in
-                    ["churn","score","proba","risk","is_churn"])), None)
-                if score_col:
-                    vals = df[score_col]
-                    if vals.max() <= 1.0:
-                        result["avg_churn_risk"] = round(float(vals.mean())*100, 1)
-                        result["high_risk_customers"] = int((vals > 0.7).sum())
-                    else:
-                        result["avg_churn_risk"] = round(float(vals.mean()), 1)
-                        result["high_risk_customers"] = int((vals > 70).sum())
-                break
+        if "avg_churn_risk" not in result:
+            for path in ["artifacts/churn_scores.parquet","artifacts/churn_scores.csv",
+                         "artifacts/rfm_features.parquet","artifacts/rfm_features.csv"]:
+                if os.path.exists(path):
+                    df = pd.read_parquet(path) if path.endswith(".parquet") else pd.read_csv(path)
+                    df.columns = df.columns.str.lower().str.strip()
+                    score_col = next((c for c in df.columns if any(k in c for k in
+                        ["churn","score","proba","risk","is_churn"])), None)
+                    if score_col:
+                        vals = df[score_col]
+                        if vals.max() <= 1.0:
+                            result["avg_churn_risk"] = round(float(vals.mean())*100, 1)
+                            result["high_risk_customers"] = int((vals > 0.7).sum())
+                        else:
+                            result["avg_churn_risk"] = round(float(vals.mean()), 1)
+                            result["high_risk_customers"] = int((vals > 70).sum())
+                    break
         if "avg_churn_risk" not in result:
             result["avg_churn_risk"] = 0.0
             result["high_risk_customers"] = 0
@@ -194,30 +206,31 @@ def get_kpis():
 
     # --- Active SKUs ---
     try:
-        active_skus_val = 0
-        for p in ["artifacts/rfm_features.parquet","artifacts/rfm_features.csv",
-                  "artifacts/olist_products.parquet","artifacts/products.csv"]:
-            if os.path.exists(p):
-                df_sku = pd.read_parquet(p) if p.endswith(".parquet") else pd.read_csv(p)
-                df_sku.columns = df_sku.columns.str.lower()
-                sku_col = next((c for c in df_sku.columns if "sku" in c or "product" in c 
-                               or "item" in c or "asin" in c), None)
-                if sku_col:
-                    active_skus_val = int(df_sku[sku_col].nunique())
-                elif len(df_sku.columns) > 0:
-                    active_skus_val = int(len(df_sku))
-                break
-        result["active_skus"] = active_skus_val
+        if "active_skus" not in result:
+            active_skus_val = 0
+            for p in ["artifacts/rfm_features.parquet","artifacts/rfm_features.csv",
+                      "artifacts/olist_products.parquet","artifacts/products.csv"]:
+                if os.path.exists(p):
+                    df_sku = pd.read_parquet(p) if p.endswith(".parquet") else pd.read_csv(p)
+                    df_sku.columns = df_sku.columns.str.lower()
+                    sku_col = next((c for c in df_sku.columns if "sku" in c or "product" in c 
+                                   or "item" in c or "asin" in c), None)
+                    if sku_col:
+                        active_skus_val = int(df_sku[sku_col].nunique())
+                    elif len(df_sku.columns) > 0:
+                        active_skus_val = int(len(df_sku))
+                    break
+            result["active_skus"] = active_skus_val
     except Exception as e:
         result["active_skus"] = 0
         result["kpi_error_skus"] = str(e)
 
     # --- Model Health ---
-    result["segmentation_silhouette"] = 0.609
-    result["price_r2"] = 0.9963
-    result["models_in_production"] = 4
+    result["segmentation_silhouette"] = result.get("segmentation_silhouette", 0.609)
+    result["price_r2"] = result.get("price_r2", 0.9963)
+    result["models_in_production"] = result.get("models_in_production", 4)
     result["last_updated"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-    result["drift_status"] = "STABLE"
+    result["drift_status"] = result.get("drift_status", "STABLE")
 
     # Try to get latest drift status
     try:
@@ -235,8 +248,21 @@ def get_kpis():
 @app.get("/executive/revenue-trend")
 def get_revenue_trend():
     import os
+    import json
     import numpy as np
     from datetime import datetime, timedelta
+
+    # First preference for deployment environments like Render:
+    # use a lightweight committed JSON snapshot when parquet/data files are not present.
+    try:
+        summary_path = "artifacts/revenue_trend_summary.json"
+        if os.path.exists(summary_path):
+            with open(summary_path) as f:
+                trend = json.load(f)
+            if trend:
+                return trend
+    except Exception as e:
+        logger.warning(f"Could not read revenue trend snapshot: {e}")
 
     # Try to read real silver-layer sales data
     try:
@@ -258,7 +284,6 @@ def get_revenue_trend():
                 money_col = next((c for c in df.columns if any(k in c for k in
                     ["monetary", "revenue", "sales", "amount", "value", "spend"])), None)
                 if money_col and len(df) >= 30:
-                    # Use actual monetary values as daily revenue proxy
                     values = df[money_col].dropna().tail(30).tolist()
                     dates = [(datetime.utcnow() - timedelta(days=len(values)-1-i)).strftime("%Y-%m-%d")
                              for i in range(len(values))]

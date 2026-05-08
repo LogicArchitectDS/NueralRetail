@@ -164,7 +164,6 @@ NueralRetail_Solo/
 ├── railway.toml
 ├── render.yaml
 ├── requirements-api.txt
-├── requirements-streamlit.txt
 └── requirements.txt
 ```
 
@@ -184,7 +183,6 @@ This section explains what each important file in the project does.
 | `/home/seshu/NueralRetail_Solo/poetry.lock` | Locked dependency versions for reproducible local builds. |
 | `/home/seshu/NueralRetail_Solo/requirements.txt` | Lightweight dependency file for Streamlit dashboard deployment. |
 | `/home/seshu/NueralRetail_Solo/requirements-api.txt` | Heavier dependency file for FastAPI + ML serving deployments. |
-| `/home/seshu/NueralRetail_Solo/requirements-streamlit.txt` | Alternate Streamlit requirements file retained from earlier deployment setups. |
 | `/home/seshu/NueralRetail_Solo/Dockerfile` | Root Docker image for API deployment, especially Railway API deployment. |
 | `/home/seshu/NueralRetail_Solo/Dockerfile.api` | Dedicated Docker image for FastAPI + ML model serving. |
 | `/home/seshu/NueralRetail_Solo/Dockerfile.app` | Dedicated Docker image for the Streamlit dashboard. |
@@ -241,7 +239,6 @@ This section explains what each important file in the project does.
 |---|---|
 | `/home/seshu/NueralRetail_Solo/src/app/streamlit_app.py` | Main multi-page Streamlit dashboard. Handles login, navigation, live API calls, KPI display, demand charting, churn exploration, inventory calculations, price simulation, and MLOps monitoring. |
 | `/home/seshu/NueralRetail_Solo/src/app/pdf_export.py` | Utility to export KPI-style reports to PDF using ReportLab. |
-| `/home/seshu/NueralRetail_Solo/src/app/auth_config.yaml` | Older or simpler auth configuration stub retained in the repo; the dashboard currently uses `config/auth_config.yaml` instead. |
 
 ### Implemented Dashboard Pages
 
@@ -297,7 +294,6 @@ These improve evaluator visibility by showing churn-risk patterns, customer-leve
 | `/home/seshu/NueralRetail_Solo/src/models/train_xgboost.py` | XGBoost churn training script with SMOTE, metrics logging, and saved model output. |
 | `/home/seshu/NueralRetail_Solo/src/models/train_lightgbm.py` | LightGBM churn classifier with DART boosting, MLflow logging, and artifact persistence. |
 | `/home/seshu/NueralRetail_Solo/src/models/train_churn_stacked.py` | Stacked churn ensemble script using XGBoost, HistGradientBoosting, and a Logistic Regression meta-learner. Also creates a SHAP explainer artifact. |
-| `/home/seshu/NueralRetail_Solo/src/models/train_churn_stack.py` | Placeholder file kept in the repo; currently does not contain implementation and appears superseded by `train_churn_stacked.py`. |
 | `/home/seshu/NueralRetail_Solo/src/models/train_prophet.py` | Prophet-based time-series forecasting pipeline with optional cross-validation and MLflow artifact logging. |
 | `/home/seshu/NueralRetail_Solo/src/models/train_lstm.py` | PyTorch Lightning LSTM training script for multivariate demand forecasting. |
 | `/home/seshu/NueralRetail_Solo/src/models/train_ensemble.py` | Prophet + LSTM ensemble blending script that uses Optuna to search the best forecast weight. |
@@ -639,11 +635,10 @@ The biggest issue in the project is the forecasting MAPE. The pipeline is implem
 
 ### 11.2 Mixed maturity across files
 
-Some files in the repo are fully implemented and production-oriented, while a few others are placeholders or legacy versions retained from earlier iterations. Examples:
+Some files in the repo are fully implemented and production-oriented, while a few others are placeholders or scaffolding retained for future extension. Examples:
 
-- `src/models/train_churn_stack.py` is a placeholder
-- `src/monitoring/drift_report.py` is a placeholder
-- `src/monitoring/auto_retrain.py` is a placeholder
+- `src/monitoring/drift_report.py` is currently a placeholder
+- `src/monitoring/auto_retrain.py` is currently a placeholder
 - some `src/dashboard/*` and `src/serving/*` package files are empty package stubs
 
 These do not prevent the demo from working, but they show that the repo is still a hybrid of implemented production paths and future scaffolding.

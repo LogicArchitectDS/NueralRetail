@@ -6,11 +6,11 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.35-red)](https://streamlit.io)
 [![Tests](https://img.shields.io/badge/Tests-15%20passing-brightgreen)]()
 
-## 🎯 Project Overview
+## Project Overview
 End-to-end AI platform for retail analytics: demand forecasting, churn prediction,
 customer segmentation, inventory optimization, and revenue intelligence.
 
-## 📊 Key Metrics
+## Key Metrics
 | Metric | Value | Target |
 |--------|-------|--------|
 | Silhouette Score (Segmentation) | 0.609 | ≥ 0.55 ✅ |
@@ -36,7 +36,7 @@ would fall within the ≤10% target. This limitation is documented in the dashbo
 | Forecasting | PI Coverage | 95.86% | ≥88% | ✅ Met |
 | Forecasting | MAPE | 168% | ≤10% | ⚠️ Data limitation |
 
-## 🏗️ Architecture
+## Architecture
 Five-layer MLOps pipeline:
 1. **Data Ingestion** — PySpark + Great Expectations DQ gates
 2. **Feature Engineering** — RFM features, lag features, rolling statistics
@@ -44,7 +44,7 @@ Five-layer MLOps pipeline:
 4. **Serving** — FastAPI REST API + Streamlit 5-page dashboard
 5. **Monitoring** — Evidently AI drift (PSI), auto-retrain trigger, MLflow tracking
 
-## 🚀 Quick Start
+## Quick Start
 ### Prerequisites
 - Python 3.12, Poetry
 
@@ -75,7 +75,7 @@ poetry run streamlit run src/app/streamlit_app.py
 poetry run python -m pytest tests/test_api_smoke.py -v -p no:asyncio
 ```
 
-## 📁 Project Structure
+## Project Structure
 NueralRetail_Solo/
 ├── src/
 │ ├── api/main.py # FastAPI application
@@ -92,14 +92,8 @@ NueralRetail_Solo/
 ├── Dockerfile # API container definition
 └── docker-compose.yml # Local stack
 
-## 🔬 MLOps Pipeline
+## MLOps Pipeline
 - **Drift Detection**: Evidently AI PSI monitoring (threshold 0.2)
 - **Auto-Retrain**: Triggers retraining when PSI > 0.2
 - **Experiment Tracking**: MLflow with artifact store
 - **Data Quality**: Great Expectations with 5-check validation suite
-
-## 📝 Submission
-- **Repository**: https://github.com/LogicArchitectDS/NueralRetail_Solo
-- **Report**: See PDF report for full architecture and methodology
-- **Live Demo**: Add your final public HTTPS app URL here before evaluator submission. Local Docker demo runs at `http://localhost:8501`.
-- **Video**: Add your final walkthrough link here before evaluator submission.

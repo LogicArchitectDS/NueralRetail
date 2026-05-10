@@ -792,9 +792,6 @@ def main():
             except Exception as e:
                 st.error(f"Retrain API unavailable: {e}")
 
-        st.divider()
-        render_acceptance_metrics()
-
 def get_excel_download_button(df, filename="export.xlsx", label="Download Excel"):
     import io
     import streamlit as st

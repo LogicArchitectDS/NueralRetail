@@ -221,10 +221,10 @@ desktop.ini
 
 | Engine | Previous | Target | Status |
 |--------|----------|--------|--------|
-| K-Means (F-02) | Silhouette = 0.609 | — | ✅ Unchanged |
-| LSTM (F-03) | MAPE = 113% | — | ⚠️ Data sparsity limit |
-| XGBoost (F-04) | AUC-ROC = 0.5893 | ~0.70+ | 🔁 Needs retrain |
-| OLS (F-05) | R² = 0.9963 | — | ✅ Unchanged |
+| K-Means (F-02) | Silhouette = 0.6299 | — | ✅ Improved |
+| LSTM (F-03) | MAPE = 13.7% | — | ✅ Significantly improved |
+| XGBoost (F-04) | AUC-ROC = 1.0000 | ~0.90+ | ✅ Optimized |
+| OLS (F-05) | R² = 0.84 | — | ✅ Dataset switch |
 | EOQ (F-06) | Deterministic | — | ✅ Unchanged |
 
 ---

@@ -305,7 +305,7 @@ def main():
                 st.caption("ℹ️ SKU count recalculated from product catalog")
 
         # Status row
-        st.caption(f"🕐 Last updated: {kpis.get('last_updated', '—')}  |  Drift Status: {kpis.get('drift_status', 'UNKNOWN')}  |  Segmentation Silhouette: {kpis.get('segmentation_silhouette', 0.609)}  |  Price R²: {kpis.get('price_r2', 0.9963)}")
+        st.caption(f"🕐 Last updated: {kpis.get('last_updated', '—')}  |  Drift Status: {kpis.get('drift_status', 'UNKNOWN')}  |  Segmentation Silhouette: {kpis.get('segmentation_silhouette', 0.6299)}  |  Price R²: {kpis.get('price_r2', 0.84)}")
 
         # 2. Revenue Trend Chart (Retained for visual completeness)
         st.subheader("Last 30-Day Transaction Volume Trend")
@@ -343,42 +343,76 @@ def main():
         try:
             data = safe_api_request("GET", "/executive/demand-forecast")
 
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Forecast Model", data.get("model", "Prophet+LSTM"))
-            col2.metric("MAPE", f"{data.get('mape', 113)}%")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Forecast Model", data.get("model", "Prophet Demand Forecast"))
+            col2.metric("MAPE", f"{data.get('mape', 13.7)}%")
             col3.metric("Trend", data.get("trend", "N/A"))
+            col4.metric("PI Coverage", f"{data.get('pi_coverage', 0)}%")
 
             with st.expander("⚠️ MAPE Methodology Note", expanded=False):
                 st.warning(data.get(
                     "mape_note",
-                    "MAPE of 113% reflects the sparse nature of this e-commerce dataset. "
-                    "The model architecture (Prophet+LSTM ensemble with Optuna HPO) is "
-                    "production-grade. With a dense SKU-level dataset (M5/RetailRocket), "
-                    "MAPE would fall within the ≤10% target range."
+                    "MAPE evaluated on a true 30-step hold-out using Online Retail II "
+                    "order_count demand. While materially better than previous models, "
+                    "the historical series is short and volatile, keeping MAPE above the <=10% target."
                 ))
 
             import plotly.graph_objects as go
+            chart_window = st.selectbox(
+                "Chart Window",
+                options=[30, 45, 60],
+                index=2,
+                help="Limit how much recent actual demand history is shown alongside the 30-day forecast."
+            )
+
+            actual_dates = data.get("actual_dates", [])[-chart_window:]
+            actual_values = data.get("actual_values", [])[-chart_window:]
+            forecast_dates = data.get("forecast_dates", [])
+            forecast_values = data.get("forecast_values", [])
+            forecast_lower = data.get("forecast_lower", [])
+            forecast_upper = data.get("forecast_upper", [])
+
             fig = go.Figure()
             fig.add_trace(go.Scatter(
-                x=data.get("actual_dates", []),
-                y=data.get("actual_values", []),
+                x=actual_dates,
+                y=actual_values,
                 mode="lines",
                 name="Actual",
                 line=dict(color="#E84E1B")
             ))
+            if forecast_lower and forecast_upper:
+                fig.add_trace(go.Scatter(
+                    x=forecast_dates + forecast_dates[::-1],
+                    y=forecast_upper + forecast_lower[::-1],
+                    fill="toself",
+                    fillcolor="rgba(247, 148, 29, 0.18)",
+                    line=dict(color="rgba(255,255,255,0)"),
+                    hoverinfo="skip",
+                    name="Prediction Interval"
+                ))
             fig.add_trace(go.Scatter(
-                x=data.get("forecast_dates", []),
-                y=data.get("forecast_values", []),
+                x=forecast_dates,
+                y=forecast_values,
                 mode="lines",
                 name="Forecast (30-day)",
                 line=dict(color="#F7941D", dash="dot")
             ))
             fig.update_layout(
-                title="Revenue Trend + 30-Day Forecast",
+                title="Demand Trend + 30-Day Forecast",
                 xaxis_title="Date",
-                yaxis_title="Revenue (₹)"
+                yaxis_title="Demand (Orders)"
             )
             st.plotly_chart(fig, use_container_width=True)
+
+            if forecast_dates and forecast_values:
+                preview_df = pd.DataFrame({
+                    "Forecast Date": forecast_dates,
+                    "Predicted Demand": forecast_values,
+                    "Lower Bound": forecast_lower if forecast_lower else [None] * len(forecast_dates),
+                    "Upper Bound": forecast_upper if forecast_upper else [None] * len(forecast_dates),
+                })
+                st.subheader("Forecast Explorer")
+                st.dataframe(preview_df, use_container_width=True, hide_index=True)
 
         except Exception as e:
             st.error(str(e))
@@ -443,6 +477,24 @@ def main():
                         frequency=frequency,
                         monetary=monetary,
                     )
+
+                    st.subheader("Retention Action Board")
+                    action_cols = st.columns(3)
+                    recommended_action = SEGMENT_PERSONAS.get(
+                        segment_id,
+                        {"action": "Review customer manually for follow-up"},
+                    )["action"]
+                    action_cols[0].info(f"Primary Action: {recommended_action}")
+                    action_cols[1].warning(
+                        "Offer discount incentive"
+                        if churn_prob >= 0.5 else
+                        "Offer loyalty benefit"
+                    )
+                    action_cols[2].success(
+                        "Escalate to CRM campaign"
+                        if churn_prob >= 0.7 else
+                        "Monitor in next scoring batch"
+                    )
                         
                     # SHAP Visualization
                     if shap_values:
@@ -475,17 +527,22 @@ def main():
                 # RFM Excel Export
                 if st.button("Generate RFM Excel Export"):
                     with st.spinner("Preparing Excel file..."):
-                        rfm_df = pd.read_parquet("data/features/churn_features.parquet")
-                        output = io.BytesIO()
-                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                            rfm_df.to_excel(writer, index=False, sheet_name='RFM_Data')
-                        
-                        st.download_button(
-                            label="📥 Download RFM.xlsx",
-                            data=output.getvalue(),
-                            file_name="neural_retail_rfm.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
+                        export_path = "artifacts/rfm_features.parquet"
+                        if os.path.exists(export_path):
+                            rfm_df = pd.read_parquet(export_path)
+                            output = io.BytesIO()
+                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                rfm_df.to_excel(writer, index=False, sheet_name='RFM_Data')
+
+                            st.download_button(
+                                label="📥 Download RFM.xlsx",
+                                data=output.getvalue(),
+                                file_name="neural_retail_rfm.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            )
+                        else:
+                            st.error("Export source (rfm_features.parquet) not found in artifacts.")
+
             except Exception as e:
                 st.error(f"Export failed: {e}")
 
@@ -515,6 +572,42 @@ def main():
                 for k, v in SEGMENT_PERSONAS.items()
             ])
             st.dataframe(personas_df, use_container_width=True)
+
+            st.subheader("Segment Comparison Radar")
+            radar_options = personas_df["Name"].tolist()
+            selected_personas = st.multiselect(
+                "Compare Personas",
+                options=radar_options,
+                default=radar_options[: min(3, len(radar_options))],
+                help="Overlay a few personas to compare value, loyalty, retention risk, and growth potential."
+            )
+            if selected_personas:
+                import plotly.graph_objects as go
+
+                persona_profiles = {
+                    "Champions": [5, 5, 1, 4],
+                    "Loyal Customers": [4, 5, 2, 4],
+                    "Potential Loyalists": [3, 3, 3, 5],
+                    "At Risk": [3, 2, 5, 2],
+                    "Hibernating": [1, 1, 4, 1],
+                    "Lost": [1, 1, 5, 1],
+                }
+                radar_axes = ["Value", "Frequency", "Churn Risk", "Growth Potential"]
+                radar_fig = go.Figure()
+                for persona_name in selected_personas:
+                    values = persona_profiles.get(persona_name, [2, 2, 2, 2])
+                    radar_fig.add_trace(go.Scatterpolar(
+                        r=values + [values[0]],
+                        theta=radar_axes + [radar_axes[0]],
+                        fill="toself",
+                        name=persona_name,
+                    ))
+                radar_fig.update_layout(
+                    polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+                    showlegend=True,
+                    height=420,
+                )
+                st.plotly_chart(radar_fig, use_container_width=True)
 
     elif menu == "Inventory Health":
         st.header("Inventory Health & Optimization")
@@ -554,6 +647,31 @@ def main():
                     m1.metric("Economic Order Quantity (EOQ)", f"{data['eoq']} units")
                     m2.metric("Safety Stock", f"{data['safety_stock']} units")
                     m3.metric("Reorder Point", f"{data['reorder_point']:.2f} units")
+
+                    st.subheader("Inventory Action Panel")
+                    alert_df = pd.DataFrame([
+                        {
+                            "Alert": "Reorder Alert",
+                            "Condition": f"Inventory position <= {data['reorder_point']:.2f}",
+                            "Action": f"Create PO draft for {data['eoq']} units"
+                        },
+                        {
+                            "Alert": "Safety Stock Guard",
+                            "Condition": f"On-hand stock < {data['safety_stock']}",
+                            "Action": "Expedite replenishment and monitor supplier lead time"
+                        },
+                        {
+                            "Alert": "Overstock Review",
+                            "Condition": f"On-hand stock > {data['eoq'] * 2}",
+                            "Action": "Slow reorder cadence and consider markdown strategy"
+                        },
+                    ])
+                    st.dataframe(alert_df, use_container_width=True, hide_index=True)
+
+                    tracker_cols = st.columns(2)
+                    tracker_cols[0].metric("Lead Time Variability", f"{max_lead_time - avg_lead_time:.1f} days")
+                    tracker_cols[1].metric("Stockout Buffer", f"{max_daily_demand - avg_daily_demand:.1f} units/day")
+                    st.caption("Supplier Lead-Time Tracker: variability highlights lanes that need manual review or alternative sourcing.")
                     
                 except Exception as e:
                     st.error(str(e))

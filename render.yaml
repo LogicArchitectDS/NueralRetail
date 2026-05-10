@@ -22,7 +22,7 @@ services:
     dockerContext: .
     healthCheckPath: /_stcore/health
     envVars:
-      - key: API_URL
+      - key: API_BASE_URL
         value: https://neuralretail-api.onrender.com
       - key: LOG_LEVEL
         value: INFO

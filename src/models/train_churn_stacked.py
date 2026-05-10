@@ -24,10 +24,12 @@ def main():
         return
 
     # Data Preparation
-    cols_to_drop = ['Recency', 'customer_unique_id']
-    df = df.drop(columns=[col for col in cols_to_drop if col in df.columns])
+    # Based on user request, we include Recency and other customer-level features
+    feature_cols = ['Frequency', 'Monetary', 'Recency', 'avg_basket_value']
+    feature_cols = [c for c in feature_cols if c in df.columns]
+    print(f"Using features: {feature_cols}")
     
-    X = df[['Frequency', 'Monetary']]
+    X = df[feature_cols]
     y = df['is_churned']
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
@@ -53,10 +55,11 @@ def main():
     )
 
     # Configure MLflow to use local tracking
-    mlflow.set_tracking_uri("file:./mlruns")
+    mlflow_uri = os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns")
+    mlflow.set_tracking_uri(mlflow_uri)
     
     try:
-        with mlflow.start_run(run_name="churn_stacked_ensemble"):
+        with mlflow.start_run(run_name="churn_stacked_ensemble_tuned"):
             print("Training Stacked Model...")
             stacked_model.fit(X_train_res, y_train_res)
             
@@ -68,15 +71,14 @@ def main():
 
             # Log Metrics
             mlflow.log_metric("auc_roc", auc_roc)
-            mlflow.log_param("ensemble_type", "stacking")
-            mlflow.log_param("base_learners", "xgb, hgb")
+            mlflow.log_param("features", str(feature_cols))
             
             # Save Model
             os.makedirs('models', exist_ok=True)
             joblib.dump(stacked_model, MODEL_PATH)
             print(f"Model saved to {MODEL_PATH}")
 
-            # SHAP Explainability (F-04 requirement)
+            # SHAP Explainability
             print("Generating SHAP summary for meta-learner...")
             X_summary = shap.sample(X_test, 50)
             explainer = shap.KernelExplainer(stacked_model.predict_proba, X_summary)

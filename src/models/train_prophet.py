@@ -82,7 +82,7 @@ def main():
         "data/features/demand_features.parquet",
         "data/features/demand_single.parquet",
     ]
-    mlflow_tracking_uri = "http://localhost:5002"
+    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5002")
     
     print(f"Setting MLflow tracking URI to {mlflow_tracking_uri}")
     mlflow.set_tracking_uri(mlflow_tracking_uri)

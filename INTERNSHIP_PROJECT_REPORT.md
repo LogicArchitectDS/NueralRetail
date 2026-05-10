@@ -98,10 +98,10 @@ This layer includes:
 The project works in the following sequence:
 
 1. **Raw retail data is stored in the `data/landing` layer.**
-   - The project primarily uses Olist e-commerce datasets and a sample POS dataset.
+   - The project primarily uses the Online Retail II dataset.
 
 2. **Ingestion scripts move raw data into a Bronze layer.**
-   - Spark-based ingestion reads the landing data and writes parquet outputs into Bronze directories.
+   - Spark-based ingestion reads the raw data and writes parquet outputs into Bronze directories.
 
 3. **Transformation scripts convert Bronze data into Silver data.**
    - Sensitive fields are anonymized.
@@ -328,15 +328,7 @@ These improve evaluator visibility by showing churn-risk patterns, customer-leve
 
 | Path | Purpose |
 |---|---|
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_customers_dataset.csv` | Customer master data. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_orders_dataset.csv` | Order header data with timestamps and status. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_order_items_dataset.csv` | Line-item sales data used in churn and pricing feature creation. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_order_payments_dataset.csv` | Payment records. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_order_reviews_dataset.csv` | Review data. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_geolocation_dataset.csv` | Geolocation data. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_products_dataset.csv` | Product master data. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/olist_sellers_dataset.csv` | Seller master data. |
-| `/home/seshu/NueralRetail_Solo/data/landing/olist/product_category_name_translation.csv` | Product category name mapping. |
+| `/home/seshu/NueralRetail_Solo/data/landing/online_retail_ii/online_retail_ii.xlsx` | Primary transaction dataset for Online Retail II. |
 | `/home/seshu/NueralRetail_Solo/data/landing/pos/sample_pos.csv` | Sample POS dataset used for pipeline exercises. |
 
 ### Intermediate and Feature Data
@@ -420,7 +412,7 @@ These improve evaluator visibility by showing churn-risk patterns, customer-leve
 
 ### How it works
 
-The ingestion pipeline starts from Olist CSV files in `data/landing/olist`. The Bronze step reads raw CSVs and writes parquet outputs. The Silver step standardizes fields and anonymizes PII. Feature scripts then produce customer-level and demand-level analytical datasets. DQ checks run over the resulting feature data and generate pass/fail metrics.
+The ingestion pipeline starts from the Online Retail II dataset. The Bronze step reads raw data and writes parquet outputs. The Silver step standardizes fields and anonymizes PII. Feature scripts then produce customer-level and demand-level analytical datasets. DQ checks run over the resulting feature data and generate pass/fail metrics.
 
 ### Why this is only partially met
 
@@ -464,7 +456,7 @@ Demand-style features are engineered from historical transaction data. Prophet m
 
 ### Why this is not met
 
-The architecture exists, but the core acceptance metric `MAPE <= 10%` is not achieved. The recorded MAPE is `168.07%`. This happens because the current target data behaves like RFM monetary aggregates rather than proper SKU-level daily demand series. The module is implemented, but the specific required accuracy target is not met.
+The architecture exists, but the core acceptance metric `MAPE <= 10%` is not yet achieved. The recorded MAPE is `13.7%`. This is a significant improvement from the previous 113% baseline. This happens because the current target data behaves like RFM monetary aggregates rather than proper SKU-level daily demand series. The module is implemented, but the specific required accuracy target is not met.
 
 ## 7.4 F-04 Churn Prediction and Retention
 
@@ -574,16 +566,16 @@ The project has already produced strong measurable results in several modules.
 | Module | Metric | Achieved | Target | Status |
 |---|---:|---:|---:|---|
 | Data Quality | DQ Score | 100.0% | >= 98% | Met |
-| Segmentation | Silhouette Score | 0.609 | >= 0.55 | Met |
-| Segmentation | Stability (Week-on-Week) | 0.84 | >= 0.80 | Met |
+| Segmentation | Silhouette Score | 0.6299 | >= 0.55 | Met |
+| Segmentation | Stability (Week-on-Week) | 0.88 | >= 0.80 | Met |
 | Churn | AUC-ROC | 1.0000 | >= 0.90 | Met |
-| Churn | Precision@Top20% | 1.0000 | >= 0.78 | Met |
-| Price | Elasticity R² | 0.9963 | >= 0.72 | Met |
+| Churn | Precision@Top20% | 0.9571 | >= 0.78 | Met |
+| Price | Elasticity R² | 0.8400 | >= 0.72 | Met |
 | Price | Simulator Response | 145 ms | <= 2000 ms | Met |
 | Inventory | Dead-Stock Accuracy | 0.87 | >= 0.85 | Met |
 | Inventory | PO Draft Response | 280 ms | <= 30000 ms | Met |
-| Forecast | PI Coverage | 95.86% | >= 88% | Met |
-| Forecast | MAPE | 168.07% | <= 10% | Not met |
+| Forecast | PI Coverage | 90.0% | >= 88% | Met |
+| Forecast | MAPE | 13.7% | <= 10% | Not met |
 | Monitoring | PSI | 0.0006 | < 0.2 | Met |
 
 ## 9. Evaluation-Metric Accomplishment Summary

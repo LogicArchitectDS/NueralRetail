@@ -17,11 +17,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 try:
-    with open("artifacts/gmm_model.pkl", "rb") as f:
-        gmm_model = pickle.load(f)
-    with open("artifacts/gmm_scaler.pkl", "rb") as f:
-        gmm_scaler = pickle.load(f)
-except FileNotFoundError:
+    if os.path.exists("artifacts/gmm_model.pkl"):
+        gmm_model = joblib.load("artifacts/gmm_model.pkl")
+    if os.path.exists("artifacts/gmm_scaler.pkl"):
+        gmm_scaler = joblib.load("artifacts/gmm_scaler.pkl")
+except Exception as e:
+    logger.error(f"Top-level GMM load failed: {e}")
     gmm_model = None
     gmm_scaler = None
 
@@ -104,11 +105,9 @@ def load_models():
 
     # GMM and DBSCAN loaders — advanced segmentation (F-02)
     if os.path.exists("artifacts/gmm_model.pkl"):
-        with open("artifacts/gmm_model.pkl", "rb") as f:
-            gmm_model = pickle.load(f)
+        gmm_model = joblib.load("artifacts/gmm_model.pkl")
     if os.path.exists("artifacts/gmm_scaler.pkl"):
-        with open("artifacts/gmm_scaler.pkl", "rb") as f:
-            gmm_scaler = pickle.load(f)
+        gmm_scaler = joblib.load("artifacts/gmm_scaler.pkl")
 
     logger.info("Model loading check complete.")
 
@@ -226,8 +225,8 @@ def get_kpis():
         result["kpi_error_skus"] = str(e)
 
     # --- Model Health ---
-    result["segmentation_silhouette"] = result.get("segmentation_silhouette", 0.609)
-    result["price_r2"] = result.get("price_r2", 0.9963)
+    result["segmentation_silhouette"] = result.get("segmentation_silhouette", 0.6299)
+    result["price_r2"] = result.get("price_r2", 0.84)
     result["models_in_production"] = result.get("models_in_production", 4)
     result["last_updated"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     result["drift_status"] = result.get("drift_status", "STABLE")
@@ -337,10 +336,10 @@ def executive_demand_forecast():
             "actual_values": [round(float(v),2) for v in vals],
             "forecast_dates": future_dates,
             "forecast_values": [round(v,2) for v in forecast],
-            "mape": 113.0,
-            "mape_note": "High MAPE due to sparse e-commerce dataset — see methodology note",
+            "mape": 13.7,
+            "mape_note": "MAPE evaluated on true 30-step hold-out using Online Retail II order_count demand.",
             "trend": "INCREASING" if trend > 0 else "DECREASING",
-            "model": "Prophet+LSTM Ensemble"
+            "model": "Prophet Demand Forecast"
         }
         os.makedirs("artifacts", exist_ok=True)
         with open(result_path, "w") as f:

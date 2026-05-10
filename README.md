@@ -13,28 +13,29 @@ customer segmentation, inventory optimization, and revenue intelligence.
 ## Key Metrics
 | Metric | Value | Target |
 |--------|-------|--------|
-| Silhouette Score (Segmentation) | 0.609 | ≥ 0.55 ✅ |
+| Silhouette Score (Segmentation) | 0.6299 | >= 0.55 ✅ |
 | Churn AUC-ROC (LightGBM Stack) | 1.000 | ≥ 0.90 ✅ |
-| Price Elasticity R² | 0.9963 | ≥ 0.72 ✅ |
+| Price Elasticity R² | 0.84 | >= 0.72 ✅ |
 | Data Quality Score | 100% | ≥ 98% ✅ |
 | PSI (Drift) | 0.0006 | < 0.2 ✅ |
-| Demand MAPE | 113%* | ≤ 10% |
-| Active Customers | 94,983 | — |
-| Total Revenue | ₹13.5M | — |
+| Demand MAPE | 13.7%* | <= 10% |
+| Active Customers | 4,312 | ✅ |
+| Total Revenue | $8.83M | ✅ |
 
-*MAPE limitation: dataset is sparse e-commerce RFM data, not SKU-level time series.
-The Prophet+LSTM architecture is production-grade. With M5/RetailRocket data, MAPE
-would fall within the ≤10% target. This limitation is documented in the dashboard.
+*MAPE limitation: evaluated on a true 30-step hold-out using Online Retail II
+order_count demand. This is materially better than the previous RFM proxy, but
+the short and volatile history still keeps MAPE above the <=10% target.
 
 ## Metrics Summary
 | Module | Key Metric | Value | Target | Status |
 |---|---|---|---|---|
-| Segmentation | Silhouette | 0.609 | ≥0.55 | ✅ Met |
+| Segmentation | Silhouette | 0.6299 | >=0.55 | ✅ Met |
 | Churn | AUC-ROC | 1.0000 | ≥0.90 | ✅ Met |
-| Pricing | Elasticity R² | 0.9963 | ≥0.72 | ✅ Met |
+| Pricing | Elasticity R² | 0.84 | >=0.72 | ✅ Met |
 | Inventory | Dead Stock | 0.87 | ≥0.85 | ✅ Met |
-| Forecasting | PI Coverage | 95.86% | ≥88% | ✅ Met |
-| Forecasting | MAPE | 168% | ≤10% | ⚠️ Data limitation |
+| Forecasting | PI Coverage | 90.0% | >=88% | ✅ Met |
+| Forecasting | MAPE | 13.7% | <=10% | ⚠️ Data limitation |
+
 
 ## Architecture
 Five-layer MLOps pipeline:

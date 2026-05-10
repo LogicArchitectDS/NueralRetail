@@ -1,6 +1,6 @@
 """
 Silver layer transformations for NeuralRetail.
-Reads POS Bronze data, anonymizes PII, and promotes to Silver.
+Promotes canonical Bronze transactions to Silver with PII anonymization.
 """
 import os
 from pathlib import Path
@@ -20,28 +20,35 @@ def create_silver_transactions():
     spark = SparkSession.builder.appName("NeuralRetail-Silver").master("local[*]").getOrCreate()
     data_root = _resolve_data_root()
     
-    bronze_path = data_root / "bronze" / "bronze_pos_sales"
+    # Updated to use the new canonical Bronze source
+    bronze_path = data_root / "bronze" / "transactions.parquet"
     silver_path = data_root / "silver" / "transactions"
     
-    print(f"[SILVER] Reading Bronze POS data from: {bronze_path}")
+    print(f"[SILVER] Reading canonical Bronze data from: {bronze_path}")
     df = spark.read.parquet(str(bronze_path))
     
-    print("[SILVER] Applying Amdox Data Privacy rules (Hashing PII)...")
-    # Amdox Security Requirement: Hash the email to anonymize PII
-    silver_df = df.withColumn("customer_id_hashed", F.sha2(F.col("email"), 256)) \
-                  .drop("email", "_source_file") \
-                  .withColumnRenamed("_ingestion_timestamp", "transaction_timestamp") \
-                  .withColumnRenamed("amount", "price") # Rename to price for downstream uniformity
+    print("[SILVER] Applying Amdox Data Privacy rules (Anonymizing Customer ID)...")
+    # Hash the customer_id to anonymize PII
+    # Map canonical fields to downstream Silver schema
+    silver_df = df.withColumn("customer_id_anonymized", F.sha2(F.col("customer_id").cast("string"), 256)) \
+                  .drop("customer_id") \
+                  .withColumnRenamed("customer_id_anonymized", "customer_id") \
+                  .withColumnRenamed("invoice_date", "transaction_timestamp") \
+                  .withColumnRenamed("invoice_no", "transaction_id") \
+                  .withColumnRenamed("revenue", "price")
+    
+    # Cast timestamp correctly if needed
+    silver_df = silver_df.withColumn("transaction_timestamp", F.to_timestamp("transaction_timestamp"))
     
     print(f"[SILVER] Writing to Silver: {silver_path}")
     if silver_path.exists():
         shutil.rmtree(silver_path)
         
     silver_path.parent.mkdir(parents=True, exist_ok=True)
-    # coalesce(1) ensures it writes as a single file for Feast compatibility later
+    # coalesce(1) ensures it writes as a single file for Feast compatibility
     silver_df.coalesce(1).write.mode("overwrite").parquet(str(silver_path))
     
-    print("[SILVER] Success: POS Transactions promoted to Silver.\n")
+    print("[SILVER] Success: Canonical Transactions promoted to Silver.\n")
     spark.stop()
 
 if __name__ == "__main__":

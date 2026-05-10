@@ -1,54 +1,42 @@
 import os
 import pandas as pd
 
-# Define input and output paths
-CUSTOMERS_FILE = 'data/landing/olist/olist_customers_dataset.csv'
-ORDERS_FILE = 'data/landing/olist/olist_orders_dataset.csv'
-ITEMS_FILE = 'data/landing/olist/olist_order_items_dataset.csv'
+# Updated to use the canonical Bronze source
+INPUT_FILE = 'data/bronze/transactions.parquet'
 OUTPUT_FILE = 'data/features/churn_features.parquet'
 
 def main():
-    print("Loading datasets...")
-    try:
-        customers = pd.read_csv(CUSTOMERS_FILE)
-        orders = pd.read_csv(ORDERS_FILE)
-        items = pd.read_csv(ITEMS_FILE)
-    except FileNotFoundError as e:
-        print(f"Error loading files: {e}")
-        print("Please ensure the CSV files are located in data/landing/olist/")
+    print(f"Loading canonical dataset from {INPUT_FILE}...")
+    if not os.path.exists(INPUT_FILE):
+        print(f"Error: {INPUT_FILE} not found. Run ingestion first.")
         return
 
-    print("Merging datasets...")
-    # Merge Customers to Orders using customer_id
-    merged_df = customers.merge(orders, on='customer_id')
+    df = pd.read_parquet(INPUT_FILE)
 
-    # Merge the result to Order Items using order_id
-    merged_df = merged_df.merge(items, on='order_id')
+    print("Filtering data for churn analysis...")
+    # For churn, we need customer identification
+    df = df.dropna(subset=['customer_id'])
+    
+    # Convert invoice_date to datetime if not already
+    df['invoice_date'] = pd.to_datetime(df['invoice_date'])
 
-    print("Filtering data...")
-    # Drop any orders that have a status of "canceled" or "unavailable"
-    merged_df = merged_df[~merged_df['order_status'].isin(['canceled', 'unavailable'])].copy()
-
-    # Convert order_purchase_timestamp to datetime for calculations
-    merged_df['order_purchase_timestamp'] = pd.to_datetime(merged_df['order_purchase_timestamp'])
-
-    # Determine "today's date" as the absolute maximum order_purchase_timestamp in the entire dataset
-    today_date = merged_df['order_purchase_timestamp'].max()
+    # Determine "today's date" as the absolute maximum invoice_date in the entire dataset
+    today_date = df['invoice_date'].max()
     print(f"Calculated 'Today's Date' as: {today_date}")
 
     print("Calculating RFM features...")
-    # Group the data by customer_unique_id
-    rfm = merged_df.groupby('customer_unique_id').agg(
-        last_order_date=('order_purchase_timestamp', 'max'),
-        Frequency=('order_id', 'nunique'),
-        Monetary=('price', 'sum')
+    # Group by customer_id (canonical identifier in Online Retail II)
+    rfm = df.groupby('customer_id').agg(
+        last_order_date=('invoice_date', 'max'),
+        Frequency=('invoice_no', 'nunique'),
+        Monetary=('revenue', 'sum')
     ).reset_index()
 
     # Calculate Recency: Number of days since their most recent order
     rfm['Recency'] = (today_date - rfm['last_order_date']).dt.days
 
     # Define the Target Variable (is_churned)
-    # If Recency > 180 days -> 1, else -> 0
+    # Using 180 days as the threshold, consistent with previous implementation
     rfm['is_churned'] = (rfm['Recency'] > 180).astype(int)
 
     # Drop the temporary column used for Recency calculation

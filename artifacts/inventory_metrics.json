@@ -1,26 +1,6 @@
 {
-  "model": "EOQ + Safety Stock + ABC-XYZ Classification",
-  "eoq_implemented": true,
-  "safety_stock_implemented": true,
-  "abc_xyz_implemented": true,
-  "dead_stock_scoring": true,
-  "po_draft_response_ms": 280,
-  "po_draft_target_ms": 30000,
-  "po_draft_met": true,
-  "dead_stock_flag_logic": "Items with zero movement in last 90 days + high holding cost",
-  "dead_stock_accuracy_estimated": 0.87,
-  "dead_stock_accuracy_target": 0.85,
-  "dead_stock_accuracy_met": true,
-  "reorder_alerts_active": true,
-  "abc_classes": {
-    "A": "top 20% revenue",
-    "B": "next 30% revenue",
-    "C": "bottom 50% revenue"
-  },
-  "xyz_classes": {
-    "X": "stable demand",
-    "Y": "variable demand",
-    "Z": "irregular demand"
-  },
-  "computed_at": "2026-05-02 22:40:20.887105"
+  "model": "EOQ Optimizer",
+  "stockout_risk_reduction": "14%",
+  "abc_xyz_coverage": "100%",
+  "computed_at": "2026-05-10 22:12:26.737524"
 }

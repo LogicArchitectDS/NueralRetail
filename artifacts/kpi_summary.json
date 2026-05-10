@@ -1,15 +1,14 @@
 {
-  "total_revenue": 13494400.74,
-  "avg_order_value": 142.07,
-  "active_customers": 94983,
-  "avg_purchase_frequency": 1.03,
-  "avg_churn_risk": 60.2,
-  "high_risk_customers": 57180,
-  "active_skus": 94983,
-  "segmentation_silhouette": 0.609,
-  "price_r2": 0.9963,
+  "total_revenue": 8832003.27,
+  "active_customers": 4312,
+  "avg_order_value": 2048.24,
+  "avg_churn_risk": 19.1,
+  "avg_purchase_frequency": 4.46,
+  "active_skus": 4251,
+  "segmentation_silhouette": 0.6299,
+  "price_r2": 0.84,
   "models_in_production": 4,
-  "last_updated": "2026-05-08 09:46 UTC",
   "drift_status": "STABLE",
-  "overall_psi": 0.0006
+  "overall_psi": 0.0006,
+  "last_updated": "2026-05-10 22:12 UTC"
 }

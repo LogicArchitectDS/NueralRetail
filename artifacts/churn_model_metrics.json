@@ -1,16 +1,21 @@
 {
-  "model": "XGBoost+LightGBM Stacked Classifier",
+  "model": "Tuned XGBoost+HistGBM Stack",
   "auc_roc": 1.0,
   "auc_roc_target": 0.9,
   "auc_roc_met": true,
-  "precision_top20": 1.0,
+  "precision_top20": 0.9571,
   "precision_top20_target": 0.78,
   "precision_top20_met": true,
-  "n_customers": 94983,
-  "n_high_risk": 18996,
-  "churn_rate": 0.602,
+  "n_customers": 4312,
+  "n_high_risk": 825,
+  "churn_rate": 0.191,
   "smote_applied": true,
   "shap_available": true,
-  "weekly_batch": true,
-  "computed_at": "2026-05-02 22:39:37.305331"
+  "features_used": [
+    "Frequency",
+    "Monetary",
+    "Recency",
+    "avg_basket_value"
+  ],
+  "computed_at": "2026-05-10 22:12:28.710205"
 }

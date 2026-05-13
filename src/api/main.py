@@ -39,6 +39,8 @@ app = FastAPI(title="NeuralRetail Inference API")
 class CustomerRequest(BaseModel):
     Frequency: int
     Monetary: float
+    Recency: float = 30.0
+    avg_basket_value: float | None = None
 
 class InventoryRequest(BaseModel):
     annual_demand: float
@@ -356,25 +358,57 @@ def predict_churn(request: CustomerRequest):
         raise HTTPException(status_code=503, detail="Churn models not loaded")
         
     try:
-        df = pd.DataFrame([request.model_dump()])
-        churn_prediction = int(xgboost_model.predict(df)[0])
-        churn_probability = float(xgboost_model.predict_proba(df)[0][1])
-        shap_vals = shap_explainer.shap_values(df)
+        payload = request.model_dump()
+        avg_basket_value = payload["avg_basket_value"]
+        if avg_basket_value is None:
+            avg_basket_value = float(payload["Monetary"]) / max(float(payload["Frequency"]), 1.0)
+
+        candidate_frames = [
+            pd.DataFrame([{
+                "Frequency": float(payload["Frequency"]),
+                "Monetary": float(payload["Monetary"]),
+                "Recency": float(payload["Recency"]),
+                "avg_basket_value": float(avg_basket_value),
+            }]),
+            pd.DataFrame([{
+                "Frequency": float(payload["Frequency"]),
+                "Monetary": float(payload["Monetary"]),
+            }]),
+        ]
+
+        last_error = None
+        df = None
+        churn_prediction = None
+        churn_probability = None
+        shap_vals = None
+        for features in candidate_frames:
+            try:
+                churn_prediction = int(xgboost_model.predict(features)[0])
+                churn_probability = float(xgboost_model.predict_proba(features)[0][1])
+                shap_vals = shap_explainer.shap_values(features)
+                df = features
+                break
+            except Exception as exc:
+                last_error = exc
+
+        if df is None or churn_prediction is None or churn_probability is None or shap_vals is None:
+            raise RuntimeError(f"Churn scoring failed for all supported feature layouts: {last_error}")
         
         if isinstance(shap_vals, list):
             shap_array = shap_vals[1][0] if len(shap_vals) > 1 else shap_vals[0][0]
         else:
             shap_array = shap_vals[0]
-            
+
         shap_values_dict = {
-            "Frequency": float(shap_array[0]),
-            "Monetary": float(shap_array[1])
+            feature_name: float(shap_value)
+            for feature_name, shap_value in zip(df.columns.tolist(), shap_array)
         }
         
         return {
             "churn_prediction": churn_prediction,
             "churn_probability": churn_probability,
-            "shap_values": shap_values_dict
+            "shap_values": shap_values_dict,
+            "features_used": df.columns.tolist(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -385,7 +419,10 @@ def predict_segment(request: CustomerRequest):
         raise HTTPException(status_code=503, detail="Segmentation models not loaded")
 
     try:
-        df = pd.DataFrame([request.model_dump()])
+        df = pd.DataFrame([{
+            "Frequency": float(request.Frequency),
+            "Monetary": float(request.Monetary),
+        }])
         scaled_data = kmeans_scaler.transform(df)
         cluster_id = int(kmeans_model.predict(scaled_data)[0])
 

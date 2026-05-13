@@ -370,7 +370,11 @@ def predict_churn(request: CustomerRequest):
             "avg_basket_value": float(avg_basket_value),
         }
 
-        expected_cols = list(getattr(xgboost_model, "feature_names_in_", []) or ["Frequency", "Monetary"])
+        raw_feature_names = getattr(xgboost_model, "feature_names_in_", None)
+        if raw_feature_names is None:
+            expected_cols = ["Frequency", "Monetary"]
+        else:
+            expected_cols = list(raw_feature_names)
         missing = [col for col in expected_cols if col not in feature_defaults]
         if missing:
             raise RuntimeError(f"Unsupported churn model feature requirements: {missing}")

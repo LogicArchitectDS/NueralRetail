@@ -354,8 +354,8 @@ def executive_demand_forecast():
 
 @app.post("/predict/churn")
 def predict_churn(request: CustomerRequest):
-    if xgboost_model is None or shap_explainer is None:
-        raise HTTPException(status_code=503, detail="Churn models not loaded")
+    if xgboost_model is None:
+        raise HTTPException(status_code=503, detail="Churn model not loaded")
         
     try:
         payload = request.model_dump()
@@ -363,53 +363,48 @@ def predict_churn(request: CustomerRequest):
         if avg_basket_value is None:
             avg_basket_value = float(payload["Monetary"]) / max(float(payload["Frequency"]), 1.0)
 
-        candidate_frames = [
-            pd.DataFrame([{
-                "Frequency": float(payload["Frequency"]),
-                "Monetary": float(payload["Monetary"]),
-                "Recency": float(payload["Recency"]),
-                "avg_basket_value": float(avg_basket_value),
-            }]),
-            pd.DataFrame([{
-                "Frequency": float(payload["Frequency"]),
-                "Monetary": float(payload["Monetary"]),
-            }]),
-        ]
-
-        last_error = None
-        df = None
-        churn_prediction = None
-        churn_probability = None
-        shap_vals = None
-        for features in candidate_frames:
-            try:
-                churn_prediction = int(xgboost_model.predict(features)[0])
-                churn_probability = float(xgboost_model.predict_proba(features)[0][1])
-                shap_vals = shap_explainer.shap_values(features)
-                df = features
-                break
-            except Exception as exc:
-                last_error = exc
-
-        if df is None or churn_prediction is None or churn_probability is None or shap_vals is None:
-            raise RuntimeError(f"Churn scoring failed for all supported feature layouts: {last_error}")
-        
-        if isinstance(shap_vals, list):
-            shap_array = shap_vals[1][0] if len(shap_vals) > 1 else shap_vals[0][0]
-        else:
-            shap_array = shap_vals[0]
-
-        shap_values_dict = {
-            feature_name: float(shap_value)
-            for feature_name, shap_value in zip(df.columns.tolist(), shap_array)
+        feature_defaults = {
+            "Frequency": float(payload["Frequency"]),
+            "Monetary": float(payload["Monetary"]),
+            "Recency": float(payload["Recency"]),
+            "avg_basket_value": float(avg_basket_value),
         }
-        
-        return {
+
+        expected_cols = list(getattr(xgboost_model, "feature_names_in_", []) or ["Frequency", "Monetary"])
+        missing = [col for col in expected_cols if col not in feature_defaults]
+        if missing:
+            raise RuntimeError(f"Unsupported churn model feature requirements: {missing}")
+
+        df = pd.DataFrame([{col: feature_defaults[col] for col in expected_cols}])
+        churn_prediction = int(xgboost_model.predict(df)[0])
+        churn_probability = float(xgboost_model.predict_proba(df)[0][1])
+
+        shap_values_dict = {}
+        shap_warning = None
+        if shap_explainer is not None:
+            try:
+                shap_vals = shap_explainer.shap_values(df)
+                if isinstance(shap_vals, list):
+                    shap_array = shap_vals[1][0] if len(shap_vals) > 1 else shap_vals[0][0]
+                else:
+                    shap_array = shap_vals[0]
+                shap_values_dict = {
+                    feature_name: float(shap_value)
+                    for feature_name, shap_value in zip(df.columns.tolist(), shap_array)
+                }
+            except Exception as exc:
+                logger.warning(f"SHAP explanation generation failed for /predict/churn: {exc}")
+                shap_warning = "SHAP explanation unavailable for current model/explainer combination"
+
+        response = {
             "churn_prediction": churn_prediction,
             "churn_probability": churn_probability,
             "shap_values": shap_values_dict,
             "features_used": df.columns.tolist(),
         }
+        if shap_warning:
+            response["shap_warning"] = shap_warning
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
